@@ -11,6 +11,13 @@ _Last updated: 2026-09-27 (self-hosted prover integration branch)_
 
 ## ▶ Resume here
 
+**Wallet setup redesigned:** creation is the primary action, backup and password
+are separate steps, and every setup subpage has Back. Six synthetic React tests
+pass and native welcome/import/hidden-backup navigation was verified in an
+isolated preview; see [desktop onboarding](../code/desktop.md#frontend-src). Returning to
+welcome discards only unfinished setup, never an existing wallet. The header
+explains setup before showing friendly network names after onboarding.
+
 **Self-hosted prover adapter is built and tested.** Select `starknet-rpc` in
 Settings to use an existing Starknet transaction prover; see
 [setup and API details](../code/self-hosted-prover.md). The macOS app builds
@@ -57,6 +64,10 @@ Phases are defined in [spec §13](../../spec/wallet-companion-spec.md#13-phasing
 
 ### ✅ Done
 
+- **Onboarding navigation and clarity** — creation-first welcome screen, step
+  progress, concealed/numbered recovery phrase, backup confirmation, explicit
+  password labels and Back navigation with staged-phrase cancellation. Six
+  frontend tests cover state transitions without a real wallet.
 - **Self-hosted Starknet prover transport** — `starknet-rpc` backend, Settings
   option, SSH-loopback setup guide and optional desktop resource override.
   Synthetic tests cover protocol/routing, errors and persistence; existing
@@ -154,6 +165,8 @@ Phases are defined in [spec §13](../../spec/wallet-companion-spec.md#13-phasing
 
 ### ⛔ Blocked (needs human / security review)
 
+- **Onboarding custody review** — review the recovery-phrase display and new
+  cancellation IPC before sensitive wallet use. UI tests do not validate crypto.
 - **Self-hosted prover security review** — private-input routing, endpoint
   trust and forced proving-log redaction need human review before sensitive
   wallet use. Adapter tests are not a crypto audit or a STRK20 transfer test.
@@ -189,7 +202,8 @@ Phases are defined in [spec §13](../../spec/wallet-companion-spec.md#13-phasing
 | Build | `cargo build` | ✅ |
 | Tests (workspace) | `cargo test` | ✅ 140 passed; 1 opt-in live check ignored |
 | Lint (workspace) | `cargo clippy --all-targets -- -D warnings` | ✅ clean |
-| Desktop frontend | `cd desktop && npm run build` | ✅ type-checks and builds. GUI **not run-verified** |
+| Desktop frontend | `cd desktop && npm run build` | ✅ type-checks and builds; onboarding welcome/Back paths visually verified in isolated native preview. Full wallet/approval GUI not verified in this change |
+| Onboarding UI tests | `cd desktop && npm test` | ✅ 6 synthetic React interaction tests |
 | Self-hosted app bundle | `cd desktop && npm run tauri build -- --config tauri.self-hosted.conf.json --bundles app --no-sign` | ✅ macOS arm64 `strkd.app`, no native prover resources; unsigned |
 | Existing prover health | `cargo test -p prover --test starknet_rpc live_loopback_prover_health -- --ignored --nocapture` | ✅ RPC `0.10.3-rc.2`; no proof requested |
 

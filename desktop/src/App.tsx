@@ -137,7 +137,8 @@ export default function App() {
         <span className="spacer" />
         {status && (
           <span className="muted small">
-            {status.network} · {status.locked ? "locked" : `${status.accounts} acct`}
+            {status.needs_onboarding ? "Wallet setup" :
+              `${status.network === "SN_MAIN" ? "Mainnet" : "Sepolia testnet"} · ${status.locked ? "locked" : `${status.accounts} acct`}`}
           </span>
         )}
         {unlocked && (

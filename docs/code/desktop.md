@@ -109,6 +109,7 @@ tauri's `image-png` feature.
 | `status` | locked / needs_onboarding / network / version / service_url / account count |
 | `generate(word_count)` | generate + stage a mnemonic, return it for one-time backup |
 | `import(phrase)` | validate + stage an existing mnemonic |
+| `cancel_setup` | discard the unfinished staged mnemonic; leaves any existing vault/session intact |
 | `finalize_setup(passphrase)` | encrypt staged mnemonic → write vault → unlock |
 | `unlock(passphrase)` / `lock` | open/close the vault |
 | `set_network(network)` | switch the active network (`"mainnet"`/`"testnet"`) — drives deploy/fund/sign + deploy-status |
@@ -126,6 +127,26 @@ tauri's `image-png` feature.
 | `respond_approval(id, approved)` | resolve a pending approval prompt |
 
 ## Frontend (`src/`)
+
+Onboarding makes **Create a new wallet** the primary action, with import as a
+separate route. New wallets follow three steps: choose → back up → password.
+The recovery phrase starts hidden and can be revealed as twelve numbered words;
+continuing requires confirming it has been saved. Each subpage has **Back**.
+Back from a new wallet's password step retains its phrase for review and clears
+the password fields; returning to welcome cancels the staged Rust-side mnemonic
+and clears the UI fields. An import must be entered again if the user goes back
+from its password step. Requests disable competing actions until they finish.
+
+During onboarding the header says **Wallet setup** instead of showing a network
+that cannot yet be changed. After setup it shows **Mainnet** or **Sepolia testnet**.
+This is a display change; the startup network still defaults to Sepolia.
+
+`cd desktop && npm test` runs six React interaction tests with synthetic,
+deliberately invalid recovery words and a test-only IPC replacement. These cover
+Back navigation, hidden/revealed backup, input clearing, password mismatch,
+in-flight requests and recoverable errors. They never touch a real wallet. The
+test runner bundles only its test entry under `node_modules/.cache`; no mock IPC
+is included in the desktop build.
 
 `api.ts` wraps the IPC commands (`invoke`) and the `approval-request` event
 listener. `App.tsx` routes by `status`: **onboarding** (no vault) → **unlock**

@@ -8,6 +8,57 @@ Use the [entry template](#entry-template) at the bottom for every new entry.
 
 ---
 
+## 2026-09-27 — Clear new-wallet setup and Back navigation
+
+**Did**
+- Made creation the primary welcome action, separated import, and split new
+  wallet setup into recovery backup and password steps with visible progress.
+- Added Back to every setup subpage. Returning to welcome clears UI inputs and
+  drops the staged Rust-side `Zeroizing` mnemonic via the IPC-only
+  `cancel_setup` command. Existing vaults and sessions are untouched.
+- Added a concealed, numbered recovery phrase and explicit backup confirmation;
+  labeled password fields, validation messages, and disabled competing actions
+  while requests are in flight. Back from a new wallet's password step preserves
+  its recovery phrase while clearing password inputs.
+- Replaced the onboarding network/lock header with `Wallet setup` and explained
+  where network/prover selection lives. Later headers use readable network names.
+- Added six React interaction tests using synthetic invalid recovery words and
+  mock IPC. Updated the JavaScript Tauri packages to match the installed Rust
+  package minor versions after the bundler rejected the mismatch.
+
+**Decisions**
+- Keep network behavior unchanged; setup copy explains that selection comes
+  later. Startup still defaults to Sepolia; network persistence is separate work.
+- Use an isolated preview app identifier for native onboarding verification,
+  so the normal app's wallet is not reset or used for tests.
+- Clear abandoned frontend references and zeroize the staged Rust value; do not
+  claim JavaScript strings are securely erased from process memory.
+
+**Verify**
+- `cd desktop && npm test`: six tests passed, covering create/import Back paths,
+  backup visibility, password validation, duplicate actions and retryable errors.
+- `cargo build -j 4`, `cargo test -j 4` and
+  `cargo clippy --all-targets -j 4 -- -D warnings`: passed; 140 workspace tests,
+  one opt-in live prover check ignored.
+- `cd desktop && npm run build`: TypeScript and Vite passed.
+- Native preview: welcome layout visually inspected; import → Back and create
+  → hidden backup → Back both returned to welcome. The throwaway preview phrase
+  was never revealed, saved to a vault, or funded. Preview was then closed.
+- `cd desktop && npm run tauri build -- --config tauri.self-hosted.conf.json --bundles app --no-sign`:
+  rebuilds the macOS app without a bundled native prover.
+
+**Next / Resume**
+- Review recovery-phrase presentation/cancellation before sensitive wallet use;
+  continue the separate self-hosted prover and Sepolia end-to-end review.
+
+**Notes / caveats**
+- Security-sensitive onboarding changes are flagged for human review. This is
+  UI/navigation verification, not a crypto audit or mainnet enablement.
+- The existing frontend dependency audit still reports two moderate and four
+  high findings; dependency security remediation remains separate work.
+
+---
+
 ## 2026-09-27 — Use an existing Starknet transaction prover
 
 **Did**

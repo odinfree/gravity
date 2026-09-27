@@ -120,6 +120,7 @@ export const api = {
   status: () => invoke<Status>("status"),
   generate: (wordCount: number) => invoke<string>("generate", { wordCount }),
   import: (phrase: string) => invoke<void>("import", { phrase }),
+  cancelSetup: () => invoke<void>("cancel_setup"),
   finalizeSetup: (passphrase: string) => invoke<void>("finalize_setup", { passphrase }),
   unlock: (passphrase: string) => invoke<void>("unlock", { passphrase }),
   lock: () => invoke<void>("lock"),

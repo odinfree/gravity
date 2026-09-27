@@ -194,6 +194,14 @@ async fn import(state: State<'_, DesktopState>, phrase: String) -> Result<(), St
     Ok(())
 }
 
+/// Abandon unfinished setup. Dropping Zeroizing clears the staged mnemonic;
+/// an existing vault and unlocked session are never touched.
+#[tauri::command]
+async fn cancel_setup(state: State<'_, DesktopState>) -> Result<(), String> {
+    *state.onboarding.lock().map_err(|_| "setup state unavailable")? = None;
+    Ok(())
+}
+
 /// Encrypt the staged mnemonic under `passphrase`, write the vault, and enter
 /// the unlocked state.
 #[tauri::command]
@@ -895,6 +903,7 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            cancel_setup,
             status,
             generate,
             import,

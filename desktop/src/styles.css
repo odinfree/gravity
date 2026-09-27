@@ -400,3 +400,39 @@ button.ghost {
   color: var(--err);
   border: 1px solid var(--err);
 }
+
+/* Wallet setup: one clear decision per step, with an escape on every subpage. */
+.onboarding { padding: 22px; gap: 16px; }
+.onboarding h1 { font-size: 26px; line-height: 1.2; letter-spacing: -0.6px; margin: 0; }
+.onboarding p { margin: 0; line-height: 1.55; }
+.setup-nav { display: flex; align-items: center; justify-content: space-between; min-height: 30px; }
+.setup-eyebrow { font-size: 10px; font-weight: 700; letter-spacing: 1.5px; color: var(--muted); }
+.back-button { background: none; color: var(--text); border: 1px solid var(--line); border-radius: 7px; padding: 7px 12px; cursor: pointer; }
+.back-button:hover { border-color: var(--accent); }
+.setup-progress { list-style: none; padding: 0; margin: 0 0 8px; display: flex; gap: 8px; }
+.setup-progress li { flex: 1; border-top: 3px solid var(--line); padding-top: 8px; font-size: 11px; color: var(--muted); }
+.setup-progress li.active { border-color: var(--accent); color: var(--text); }
+.setup-intro { display: flex; flex-direction: column; gap: 14px; }
+.wallet-mark { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 14px; background: rgba(110,139,255,.14); border: 1px solid rgba(110,139,255,.35); color: #a9b9ff; font-size: 30px; }
+button.setup-create { display: flex; align-items: center; justify-content: space-between; min-height: 48px; font-size: 15px; }
+.setup-caption { font-size: 11px; }
+.setup-divider { display: flex; align-items: center; gap: 12px; font-size: 11px; color: var(--muted); margin-top: 4px; }
+.setup-divider::before, .setup-divider::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.setup-note { padding: 14px; border: 1px solid var(--line); background: var(--panel); border-radius: 10px; font-size: 12px; }
+.setup-note p { color: var(--muted); margin-top: 6px; }
+.setup-form { display: flex; flex-direction: column; gap: 12px; }
+.setup-form .field { margin-top: 4px; font-size: 12px; }
+.setup-form .primary { min-height: 44px; margin-top: 6px; }
+.recovery-card { padding: 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; display: flex; flex-direction: column; gap: 16px; }
+.recovery-hidden { display: flex; flex-direction: column; justify-content: center; gap: 10px; min-height: 180px; text-align: center; line-height: 1.5; }
+.recovery-words { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.recovery-words li { padding: 9px 6px; background: var(--bg); border-radius: 6px; font-size: 12px; overflow-wrap: anywhere; }
+.recovery-words li span { font-size: 10px; color: var(--muted); padding-right: 6px; user-select: none; }
+.setup-check { display: flex; align-items: flex-start; gap: 9px; font-size: 12px; line-height: 1.5; }
+.setup-check input { accent-color: var(--accent); margin: 2px 0 0; }
+.onboarding button:disabled { opacity: .5; cursor: default; }
+.onboarding :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+@media (max-width: 360px) {
+  .onboarding { padding: 16px; }
+  .recovery-words { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
