@@ -9,6 +9,9 @@ agent methods. Build/run steps are in the [README](../../README.md); architectur
 configuration and recovery are in the [privacy guide](../code/privacy-stack.md).
 The first pool adapter is STRK20 v2-compatible and currently handles STRK.
 Different pool ABIs or compliance protocols require another reviewed adapter.
+Direct shielding into the default pool is blocked on an operator-authorized
+screening integration. Do not present it as an end-user configuration task or as
+working out of the box. Missing attestations now persist as a readiness diagnostic.
 
 ## Implemented
 
@@ -28,14 +31,14 @@ Different pool ABIs or compliance protocols require another reviewed adapter.
 
 ## Validation
 
-- `cargo build`, `cargo test`: passed, 146 tests. Two opt-in checks skipped in
+- `cargo build`, `cargo test`: passed, 147 tests. Two opt-in checks skipped in
   the default suite (live prover health and the SDK pipeline).
 - `cargo clippy --all-targets -- -D warnings`: passed.
 - Explicit SDK/Rust pipeline check: passed against synthetic loopback services,
   covering real signing, review ownership, one-shot submission and receipt recovery.
-- SDK worker: 14 tests passed, including all four action builders, screening
+- SDK worker: 16 tests passed, including all four action builders, screening
   policy, mature notes and wrong-chain rejection.
-- Desktop: 12 React tests passed; TypeScript/Vite and unsigned Apple Silicon
+- Desktop: 14 React tests passed; TypeScript/Vite and unsigned Apple Silicon
   `gravity.app` build passed. Native app launches using the existing vault; Privacy shows live registration
   and fees. A real pool-registration proof succeeded on the configured prover,
   and its final public call obtained a mainnet fee estimate. A user-approved

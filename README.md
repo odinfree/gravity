@@ -17,6 +17,11 @@ its wallet core, agent pairing, approval flow and proving infrastructure. Privac
 actions use the [Starknet privacy SDK](https://github.com/starkware-libs/starknet-privacy/tree/main/sdk).
 It is a complete wallet repository, independent of any skills collection.
 
+**Direct shielding into the default screened pool is not available out of the
+box yet.** gravity still needs a pool-authorized screening integration. This is a
+wallet/operator dependency, not something end users should have to configure.
+Registration is live-verified; the full shield → transfer → withdraw flow is not.
+
 ## What is implemented
 
 - Create a new seed wallet, additional accounts and scoped agent accounts.
@@ -75,6 +80,11 @@ For screened pools, the prover must return the pool's screening attestation.
 A bare self-hosted prover does **not** supply screening authorization; shielding
 stops before submission if the required attestation is missing. Choosing a
 custom policy cannot bypass an existing pool's contract rules.
+gravity remembers a missing attestation and shows **Shielding unavailable**;
+prover health and registration are never treated as screening authorization.
+The [official screening sidecar](https://github.com/starkware-libs/starknet-privacy/blob/main/proof-interceptor/README.md)
+requires credentials issued by its screening operator. This repository does not
+include those credentials or an authorized public screening service.
 
 [Complete privacy guide](docs/code/privacy-stack.md) ·
 [Self-hosted prover setup](docs/code/self-hosted-prover.md) ·

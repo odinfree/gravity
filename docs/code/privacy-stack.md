@@ -38,6 +38,23 @@ attempt to disable that policy. A local policy setting cannot change a contract'
 rules. Other compliance protocols, attestation schemas, allowlists or verifiers
 need explicit implementation and review.
 
+The default pool does not currently offer out-of-the-box shielding through
+gravity. Its screening integration is an outstanding wallet/operator dependency;
+end users should not be asked to obtain partner credentials. The official
+[proof interceptor](https://github.com/starkware-libs/starknet-privacy/blob/main/proof-interceptor/README.md)
+needs a screening URL and operator-issued partner credentials. Running the
+interceptor without them, or checking its health endpoint, does not supply an
+attestation. gravity does not route private inputs to an unconfigured service.
+
+`deposit_screening` reports `unverified`, `signature_missing` or `pool_enforced`.
+After a deposit proof lacks its required signature, a private diagnostic remembers
+the failure across restart and disables repeated shielding attempts in the UI.
+It stores only a hash of the service/pool/network configuration, a timestamp and
+the missing-signature flag. It is not an authorization or a transaction journal.
+Changing the configuration invalidates the observation; saving Privacy services
+also clears it after an operator fixes a service at the same endpoint. Every
+deposit still checks its own attestation, including calls through the agent API.
+
 Use a prover and discovery service configured for the same chain and pool.
 Only HTTPS or loopback HTTP is accepted; use SSH for a remote self-hosted node.
 Read [prover configuration](self-hosted-prover.md). Node.js 24+ must be available at
@@ -113,6 +130,12 @@ Only a final accepted receipt clears that gate. If a node definitively rejected
 an unknown transaction and never provides a receipt, manual reconciliation is
 required; absence of a receipt alone is not proof that it was never submitted.
 Do not erase an unknown record and resubmit blindly.
+
+Final receipts remain final when discovery is unavailable. The UI refreshes
+registration separately and reports a balance-refresh failure without restarting
+receipt polling. Balance discovery pins a numeric chain head; notes newer than
+the mature proof base are excluded from the spendable amount. Read-only worker
+requests time out after 60 seconds; proof preparation retains its 16-minute limit.
 
 Journals store hashes, public accounts and receipt states, not private notes.
 Privacy RPC requests/results/errors are excluded from full-payload request logs.

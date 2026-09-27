@@ -125,6 +125,7 @@ export interface PrivacyRequest {
 export interface PrivacyStatus {
   registered: boolean; registration_mature: boolean; public_balance: string; pool_fee: string; proof_base: number;
   shielded_balance?: string; spendable_balance?: string; notes?: number;
+  deposit_screening?: "unverified" | "signature_missing" | "pool_enforced";
 }
 export interface PrivacyReview {
   review_id: string; operation: string; amount: string; recipient: string;

@@ -16,6 +16,7 @@ export function Privacy({status}: {status: Status}) {
   const [recipient,setRecipient]=useState("");
   const [busy,setBusy]=useState("");
   const [error,setError]=useState("");
+  const [balanceError,setBalanceError]=useState("");
   const [review,setReview]=useState<PrivacyReview|null>(null);
   const [submitted,setSubmitted]=useState<PrivacySubmission|null>(null);
   const [receipt,setReceipt]=useState<PrivacyReceipt|null>(null);
@@ -31,7 +32,7 @@ export function Privacy({status}: {status: Status}) {
     return()=>{active=false;generation.current++;};
   },[]);
   useEffect(()=>{
-    generation.current++;setData(null);setReview(null);setSubmitted(null);setReceipt(null);setError("");setBusy("");
+    generation.current++;setData(null);setReview(null);setSubmitted(null);setReceipt(null);setError("");setBalanceError("");setBusy("");
     let active=true;setHistory([]);
     if(selected)api.privacyHistory(selected,chainId).then(h=>{if(active)setHistory(h);}).catch(e=>{if(active)setError(String(e));});
     return()=>{active=false;};
@@ -43,14 +44,28 @@ export function Privacy({status}: {status: Status}) {
     finally{if(epoch===generation.current)setBusy("");}
   }
   function refresh(discover=false){return task(discover?"Discovering shielded notes…":"Checking account…",async epoch=>{
-    const value=await api.privacyStatus({...context,mode:discover?"balances":"status"});
-    if(epoch===generation.current)setData(value);
+    try {
+      const value=await api.privacyStatus({...context,mode:discover?"balances":"status"});
+      if(epoch===generation.current){setData(value);if(discover)setBalanceError("");}
+    } catch(e) {
+      if(!discover)throw e;
+      if(epoch===generation.current)setBalanceError("Shielded balance unavailable. Your last confirmed transaction is unchanged.");
+    }
   });}
   function prepare(op:Operation){return task("Preparing your proof and fees…",async epoch=>{
     const amount=op==="register"?"0":parseStrk(quantity);
     const target=op==="withdraw"?(recipient.trim()||selected):recipient.trim();
     if(op==="transfer" && !/^0x[0-9a-fA-F]+$/.test(target))throw new Error("Enter the recipient’s Starknet address.");
-    const value=await api.privacyPrepare({...context,mode:"prepare",operation:op,amount,recipient:target||selected});
+    let value:PrivacyReview;
+    try { value=await api.privacyPrepare({...context,mode:"prepare",operation:op,amount,recipient:target||selected}); }
+    catch(e) {
+      // Fetch the backend's observed screening state; never infer readiness from health.
+      if(op==="deposit")try {
+        const current=await api.privacyStatus({...context,mode:"status"});
+        if(epoch===generation.current)setData(current);
+      } catch { /* Keep the original actionable error. */ }
+      throw e;
+    }
     if(epoch!==generation.current)return;
     setReview(value);setSubmitted(null);setReceipt(null);setBusy("Approve the amount and fees in the wallet…");
     // One action starts the flow. Rust still requires the final human approval.
@@ -91,8 +106,18 @@ export function Privacy({status}: {status: Status}) {
         setReceipt(value);
         if(["ACCEPTED_ON_L2","ACCEPTED_ON_L1"].includes(value.finality_status??"")){
           setHistory(h=>h.map(v=>v.transaction_hash===submitted.transaction_hash?{...v,status:value.execution_status??v.status}:v));
-          const status=await api.privacyStatus({...context,mode:"balances"});
-          if(active&&epoch===generation.current)setData(status);
+          // Reconcile public state separately: unavailable discovery must not hide
+          // registration or restart polling an already-final receipt.
+          try {
+            const current=await api.privacyStatus({...context,mode:"status"});
+            if(active&&epoch===generation.current)setData(current);
+          } catch { /* The receipt still establishes this transaction's outcome. */ }
+          try {
+            const balances=await api.privacyStatus({...context,mode:"balances"});
+            if(active&&epoch===generation.current){setData(balances);setBalanceError("");}
+          } catch {
+            if(active&&epoch===generation.current)setBalanceError("Transaction confirmed. Shielded balance refresh is unavailable; try Refresh balance later.");
+          }
           return;
         }
       } catch { /* A missing receipt is not a rejection; retry reads only. */ }
@@ -102,6 +127,8 @@ export function Privacy({status}: {status: Status}) {
   },[submitted?.transaction_hash]);
   const disabled=Boolean(busy)||!selected||!runtime;
   const accepted=receipt?.execution_status==="SUCCEEDED"&&["ACCEPTED_ON_L2","ACCEPTED_ON_L1"].includes(receipt.finality_status??"");
+  const screeningMissing=data?.deposit_screening==="signature_missing";
+  const screeningRequired=(settings?.[network].screening_policy??"required")==="required";
   return <section className="panel privacy-panel">
     <div className="privacy-title"><h2>Privacy</h2><span className="badge">{network==="mainnet"?"Mainnet":"Sepolia"}</span></div>
     <p className="muted small">Starknet privacy, using your own prover. The current adapter supports STRK20-compatible pools and STRK.</p>
@@ -126,7 +153,8 @@ export function Privacy({status}: {status: Status}) {
         <dt>Shielded STRK</dt><dd>{data.shielded_balance===undefined?"Refresh to discover":formatStrk(data.shielded_balance)}</dd>
         <dt>Spendable STRK</dt><dd>{data.spendable_balance===undefined?"—":formatStrk(data.spendable_balance)}</dd>
         <dt>Pool fee per operation</dt><dd>{formatStrk(data.pool_fee)} STRK</dd>
-        <dt>Registration</dt><dd>{data.registered?(data.registration_mature?"Registered":"Registered · settling…"):"Not registered with this pool"}</dd></dl>
+        <dt>Registration</dt><dd>{data.registered?(data.registration_mature?"Registered":"Registered · settling…"):"Not registered with this pool"}</dd>
+        <dt>Shielding</dt><dd>{screeningMissing?"Unavailable · screening missing":screeningRequired?"Screening not verified":"Pool policy applies"}</dd></dl>
       {!data.registered&&<><p className="muted small">Register once to use this pool. Click Register, approve the fees once, and gravity handles the rest.</p><button className="primary" disabled={disabled} onClick={()=>prepare("register")}>Register</button></>}
     </div>}
     {data?.registered&&!review&&(!submitted||accepted||receipt?.execution_status==="REVERTED")&&<div className="privacy-card">
@@ -136,10 +164,10 @@ export function Privacy({status}: {status: Status}) {
       </select>
       <label htmlFor="privacy-amount">Amount in STRK</label><input id="privacy-amount" className="input" inputMode="decimal" value={quantity} disabled={Boolean(busy)} onChange={e=>setQuantity(e.target.value)}/>
       {operation!=="deposit"&&<><label htmlFor="privacy-recipient">{operation==="transfer"?"Registered recipient":"Public recipient (blank = this account)"}</label><input id="privacy-recipient" className="input" placeholder="0x…" value={recipient} disabled={Boolean(busy)} onChange={e=>setRecipient(e.target.value)}/></>}
-      {operation==="deposit"&&<p className="muted small">Shielding makes a public deposit. Preparation enforces the selected pool policy; screened pools require an attestation from your prover.</p>}
+      {operation==="deposit"&&<p className="muted small">{screeningMissing?"Direct shielding is unavailable for this pool. gravity needs an authorized screening integration; your registration is complete and no deposit was submitted.":screeningRequired?"This pool requires an authorized screening signature for every deposit. Registration and a running prover alone do not enable shielding. Screening access is not included with gravity yet.":"Shielding makes a public deposit. This pool enforces its configured deposit policy."}</p>}
       {operation==="transfer"&&<p className="muted small">The recipient must be registered. Pool notes stay private, but submitting from this account reveals who paid the network fee.</p>}
       {operation==="withdraw"&&<p className="muted small">Unshielding reveals the amount and recipient. New notes need time to mature before spending.</p>}
-      <button className="primary" disabled={disabled||!data.registration_mature} onClick={()=>prepare(operation)}>{operation==="deposit"?"Shield STRK":labels[operation]}</button>
+      <button className="primary" disabled={disabled||!data.registration_mature||(operation==="deposit"&&screeningMissing)} onClick={()=>prepare(operation)}>{operation==="deposit"?(screeningMissing?"Shielding unavailable":"Shield STRK"):labels[operation]}</button>
       {!data.registration_mature&&<p className="muted small">Registration is accepted. Waiting for the pool state to settle before your next action…</p>}
     </div>}
     {review&&<div className="privacy-card" aria-label="Privacy transaction review">
@@ -162,6 +190,7 @@ export function Privacy({status}: {status: Status}) {
     </div>}
     {history.length>0&&<details className="privacy-card"><summary>Recent privacy transactions</summary>{history.map(h=><div key={h.transaction_hash}><code className="addr">{h.transaction_hash}</code><button className="ghost" disabled={Boolean(busy)} onClick={()=>{setSubmitted(h);setReceipt(null);}}>Open receipt check</button></div>)}</details>}
     {busy&&<p className="privacy-progress" role="status">{busy}</p>}
+    {balanceError&&<p role="status" className="muted small">{balanceError}</p>}
     {error&&<div className="privacy-error" role="alert"><p>{error}</p><button className="ghost" disabled={Boolean(busy)} onClick={()=>{setError("");setReview(null);}}>Dismiss</button></div>}
   </section>;
 }

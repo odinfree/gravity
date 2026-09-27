@@ -8,6 +8,28 @@ Use the [entry template](#entry-template) at the bottom for every new entry.
 
 ---
 
+## 2026-09-27 — Honest shielding availability and independent balance refresh
+
+- Confirmed from the official screening integration documentation that the
+  default screened pool requires operator-issued access. A plain self-hosted
+  prover supplies no screening authorization. No supported public, unauthenticated
+  screening integration was found; direct shielding remains blocked. This is a
+  gravity integration dependency, not a workaround expected of end users.
+- Persist missing-attestation observations privately, bound to the service,
+  pool and network configuration. The UI disables repeated shield attempts after
+  that failure, while registration, private transfers and withdrawals retain
+  their separate states. Every deposit still enforces its own attestation.
+- Separate final receipt reconciliation from discovery failures, retain automatic
+  public-registration refresh, pin note discovery to a numeric head and bound
+  read-only worker operations to 60 seconds. No funds moved for these changes.
+- SDK tests: 16 passed. React tests: 14 passed. Frontend production build passed.
+  Regression coverage includes missing screening across restart/config changes,
+  fresh versus spendable notes and discovery failure after a confirmed receipt.
+  Rust workspace: 147 tests passed; the separate SDK/Rust pipeline and strict
+  clippy passed. Unsigned Apple Silicon app build passed.
+- Existing independent crypto/security review gate remains blocked; these
+  readiness and recovery fixes do not establish production audit completion.
+
 
 ## 2026-09-27 — Live registration and removal of the Done step
 

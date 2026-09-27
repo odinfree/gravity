@@ -8,7 +8,7 @@ import {Signer,ec,hash} from 'starknet';
 import {STRK} from '../worker.mjs';
 const vk='42',pool='0x123',account='0x456',chain='0x534e5f4d41494e';
 const publicKey=ec.starkCurve.getStarkKey('0x2a');
-async function pipeline(operation,{screened=false,wrongChain=false,noteAt=900,policy='required'}={}) {
+async function pipeline(operation,{screened=false,wrongChain=false,noteAt=900,policy='required',mode='prepare',discoveryFails=false}={}) {
  const methods=[],callbacks=[],requests=[];
  const server=createServer(async(req,res)=>{
   const chunks=[];for await(const c of req)chunks.push(c);
@@ -35,7 +35,8 @@ async function pipeline(operation,{screened=false,wrongChain=false,noteAt=900,po
    assert.equal(input.block_ref,990);
    value={block_ref:990,channels:[{recipient_addr:account,recipient_public_key:publicKey,channel_key:'0x0',precomputed:true}],subchannels:[],cursor:{channel_discovery_complete:true,total_n_channels:0,channels:{}}};
   } else if(req.url==='/v1/sync/incoming_state') {
-   assert.equal(input.block_ref,990);
+   assert.equal(input.block_ref,mode==='balances'?1000:990);
+   if(discoveryFails){res.writeHead(503,{'Content-Type':'application/json'});res.end(JSON.stringify({error:'synthetic discovery failure'}));return;}
    value={block_ref:990,channels:[{sender_addr:'0x789',channel_key:'0x7b'}],
     notes:[{sender_addr:'0x789',token:STRK,note_id:'0xabc',amount:'12000000000000000000',block_number:noteAt,index:0,salt:'2'}],
     cursor:{channel_discovery_complete:true,total_n_channels:1,channels:{}}};
@@ -47,7 +48,7 @@ async function pipeline(operation,{screened=false,wrongChain=false,noteAt=900,po
  let stderr='';child.stderr.on('data',v=>stderr+=v);const exit=new Promise(r=>child.on('exit',r));
  const timer=setTimeout(()=>child.kill(),15_000);let result;
  try {
-  child.stdin.write(JSON.stringify({config:{screening_policy:policy,pool_address:pool,chain_id:chain,rpc_url:base+'/rpc',discovery_url:base},account,viewing_key:vk,mode:'prepare',operation,amount:'10000000000000000000',recipient:account})+'\n');
+  child.stdin.write(JSON.stringify({config:{screening_policy:policy,pool_address:pool,chain_id:chain,rpc_url:base+'/rpc',discovery_url:base},account,viewing_key:vk,mode,operation,amount:'10000000000000000000',recipient:account})+'\n');
   const signer=new Signer('0x1'); // public throwaway test scalar
   for await(const line of createInterface({input:child.stdout})){
    const message=JSON.parse(line);callbacks.push(message.kind);
@@ -93,4 +94,12 @@ for(const operation of ['transfer','withdraw'])test(`real SDK ${operation} spend
 });
 test('fresh discovered notes cannot be selected for a private transfer',async()=>{
  const {result,callbacks}=await pipeline('transfer',{noteAt:995});assert.equal(result.code,'BALANCE');assert.deepEqual(callbacks,['error']);
+});
+test('balance discovery is pinned to head and separates fresh from spendable notes',async()=>{
+ const {result,callbacks}=await pipeline('deposit',{mode:'balances',noteAt:995});
+ assert.deepEqual(callbacks,['result']);assert.equal(result.result.shielded_balance,'12000000000000000000');assert.equal(result.result.spendable_balance,'0');
+});
+test('balance discovery errors have a safe distinct code and never request a signature',async()=>{
+ const {result,callbacks}=await pipeline('deposit',{mode:'balances',discoveryFails:true});
+ assert.deepEqual(callbacks,['error']);assert.equal(result.code,'DISCOVERY');
 });

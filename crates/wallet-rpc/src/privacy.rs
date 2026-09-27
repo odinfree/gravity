@@ -8,6 +8,7 @@ use crate::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+use sha2::{Digest, Sha256};
 use std::{collections::HashMap, path::PathBuf, process::Stdio, sync::Arc, time::Duration};
 use tokio::{
     io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
@@ -211,6 +212,8 @@ impl PrivacyState {
         write_private(&self.path.join("settings.json"), &json!(settings))?;
         *self.settings.write().await = settings;
         self.prepared.lock().await.clear();
+        // Service operators can recheck after updating a backend at the same URL.
+        write_private(&self.path.join("screening-observation.json"), &Value::Null)?;
         Ok(())
     }
     pub async fn clear(&self) {
@@ -218,6 +221,35 @@ impl PrivacyState {
     }
     pub fn runtime_ready(&self) -> bool {
         self.worker.is_file() && self.node.is_file()
+    }
+    fn screening_context(config: &Value) -> String {
+        hex::encode(Sha256::digest(config.to_string().as_bytes()))
+    }
+    fn observe_screening(&self, config: &Value, missing: bool) -> Result<(), WalletRpcError> {
+        write_private(
+            &self.path.join("screening-observation.json"),
+            &json!({
+                "context_sha256":Self::screening_context(config), "missing":missing,
+                "observed_at_ms":crate::now_unix_ms()
+            }),
+        )
+    }
+    fn deposit_screening(&self, config: &Value) -> &'static str {
+        if config["screening_policy"] == "pool_enforced" {
+            return "pool_enforced";
+        }
+        let observation: Value = std::fs::read(self.path.join("screening-observation.json"))
+            .ok()
+            .and_then(|bytes| serde_json::from_slice(&bytes).ok())
+            .unwrap_or(Value::Null);
+        if observation["context_sha256"] == Self::screening_context(config)
+            && observation["missing"] == true
+        {
+            "signature_missing"
+        } else {
+            // A health response or a previous signature cannot authorize a new deposit.
+            "unverified"
+        }
     }
 }
 
@@ -367,14 +399,18 @@ pub async fn run(
         }
     }
     let epoch = state.session.lock().await.epoch();
-    let result = worker(state, &account, chain, &req, &config).await?;
+    let mut result = worker(state, &account, chain, &req, &config).await?;
     if state.session.lock().await.epoch() != epoch {
         return Err(err("Wallet session changed; prepare again"));
     }
     if req.mode != "prepare" {
+        result["deposit_screening"] = json!(privacy.deposit_screening(&config));
         return Ok(result);
     }
     validate_prepared(&req, &config, &result)?;
+    if req.operation == "deposit" {
+        privacy.observe_screening(&config, false)?;
+    }
     let mut random = [0u8; 16];
     getrandom::getrandom(&mut random).map_err(|_| err("Cannot create review identifier"))?;
     let id = hex::encode(random);
@@ -744,8 +780,12 @@ async fn worker(
                 }
                 Some("error") => {
                     // Accept only known codes; never forward arbitrary child errors or inputs.
+                    if frame["code"] == "SCREENING_REQUIRED" && request.operation == "deposit" {
+                        privacy.observe_screening(config, true)?;
+                    }
                     let message=match frame["code"].as_str(){
-                        Some("SCREENING_REQUIRED")=>"Your prover returned no deposit-screening signature. Configure screening before shielding. Nothing was submitted.",
+                        Some("SCREENING_REQUIRED")=>"Shielding is unavailable for this pool: the prover returned no authorized screening signature. gravity needs a screening-provider integration. Nothing was submitted or spent.",
+                        Some("DISCOVERY")=>"Shielded balance unavailable: the discovery service could not complete the request. Registration and public balance are unchanged.",
                         Some("KEY_MISMATCH")=>"This account is registered with a different viewing key. Restore its original privacy wallet.",
                         Some("REGISTER")=>"Register this account first and wait for registration to mature.",
                         Some("REGISTERED")=>"This account is already registered.",
@@ -773,7 +813,7 @@ async fn worker(
     let result = tokio::select! {
         result=process => result,
         _=watch_session => Err(err("Wallet locked or session changed; privacy worker stopped")),
-        _=tokio::time::sleep(Duration::from_secs(960)) => Err(err("Privacy worker timed out; no submission was attempted")),
+        _=tokio::time::sleep(Duration::from_secs(if request.mode == "prepare" {960} else {60})) => Err(err("Privacy worker timed out; no submission was attempted")),
     };
     let _ = child.kill().await;
     let _ = child.wait().await;
@@ -1142,6 +1182,34 @@ pub fn attach(state: ServerState, path: PathBuf, worker: PathBuf) -> ServerState
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[tokio::test]
+    async fn screening_observation_is_persistent_and_configuration_bound() {
+        let mut random = [0u8; 16];
+        getrandom::getrandom(&mut random).unwrap();
+        let path = std::env::temp_dir().join(format!("gravity-screening-{}", hex::encode(random)));
+        let state = PrivacyState::new(path.clone(), PathBuf::new(), PathBuf::new());
+        let config = json!({"screening_policy":"required","pool_address":"0x123","prover_url":"http://127.0.0.1:3000","chain_id":"0x534e5f4d41494e"});
+        assert_eq!(state.deposit_screening(&config), "unverified");
+        state.observe_screening(&config, true).unwrap();
+        let restarted = PrivacyState::new(path.clone(), PathBuf::new(), PathBuf::new());
+        assert_eq!(restarted.deposit_screening(&config), "signature_missing");
+        for field in ["pool_address", "prover_url", "chain_id"] {
+            let mut changed = config.clone();
+            changed[field] = json!("changed");
+            assert_eq!(restarted.deposit_screening(&changed), "unverified");
+        }
+        let mut custom = config.clone();
+        custom["screening_policy"] = json!("pool_enforced");
+        assert_eq!(restarted.deposit_screening(&custom), "pool_enforced");
+        restarted.observe_screening(&config, false).unwrap();
+        assert_eq!(restarted.deposit_screening(&config), "unverified");
+        restarted.observe_screening(&config, true).unwrap();
+        restarted.set_settings(Settings::default()).await.unwrap();
+        assert_eq!(restarted.deposit_screening(&config), "unverified");
+        let saved = std::fs::read_to_string(path.join("screening-observation.json")).unwrap();
+        assert!(!saved.contains("prover_url"));
+        std::fs::remove_dir_all(path).unwrap();
+    }
     #[test]
     fn decimal_callback_fields_are_not_parsed_as_hex() {
         assert_eq!(felt("10").unwrap(), Felt::from(10u64));

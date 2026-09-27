@@ -72,7 +72,9 @@ export async function run(request, callback) {
     }});
   if (mode === 'balances') {
     if (!common.registered) return {...common,shielded_balance:'0',spendable_balance:'0',notes:0};
-    const {notes}=await transfers.discoverNotes({tokens:[BigInt(token)],blockIdentifier:'latest'});
+    let notes;
+    try { ({notes}=await transfers.discoverNotes({tokens:[BigInt(token)],blockIdentifier:head})); }
+    catch { fail('DISCOVERY','Shielded balance discovery unavailable'); }
     const all=notes.get(BigInt(token)) ?? [];
     const mature=all.filter(n=>Number(n.created ?? Infinity) <= base);
     return {...common,shielded_balance:all.reduce((s,n)=>s+n.amount,0n).toString(),

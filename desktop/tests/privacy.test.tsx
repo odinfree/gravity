@@ -24,9 +24,27 @@ test('account status is automatic and one action opens the approval flow for exa
 });
 test('screening failures leave the wallet with no submission path',async()=>{
   api.privacyPrepare=async()=>{throw new Error('Screening signature required');};
+  api.privacyStatus=async(v)=>({...await original.privacyStatus(v),deposit_screening:'signature_missing'});
   await click('Shield STRK');assert.match(host.querySelector('[role="alert"]')!.textContent!,/Screening/);
+  assert.ok(button('Shielding unavailable').disabled);
   assert.ok(!calls.some(c=>c.method==='submit'));await click('Dismiss');
   assert.equal(host.querySelector('[role="alert"]'),null);
+  assert.ok(button('Shielding unavailable').disabled,'dismissing an error must not claim shielding works');
+  await act(async()=>{const select=host.querySelector('#privacy-operation') as HTMLSelectElement;select.value='transfer';select.dispatchEvent(new Event('change',{bubbles:true}));});
+  assert.ok(!button('Private transfer').disabled,'screening applies only to deposits');
+});
+test('a confirmed receipt remains final when discovery fails',async()=>{
+  api.privacyStatus=async(v)=>{if(v.mode==='balances')throw new Error('Discovery unavailable');return original.privacyStatus(v);};
+  let receipts=0;api.privacyReceipt=async()=>{receipts++;return original.privacyReceipt();};
+  await click('Shield STRK');
+  assert.match(host.textContent!,/Transaction accepted/);
+  assert.match(host.textContent!,/Shielded balance refresh is unavailable/);
+  assert.ok(!button('Shield STRK').disabled);
+  assert.equal(receipts,1);
+});
+test('unverified screening is never labelled ready',()=>{
+  assert.match(host.textContent!,/Screening not verified/);
+  assert.match(host.textContent!,/Screening access is not included with gravity yet/);
 });
 test('rejecting the wallet approval never claims a transaction was accepted',async()=>{
   api.privacySubmit=async()=>{throw new Error('User refused');};
