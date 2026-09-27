@@ -38,7 +38,8 @@ Different pool ABIs or compliance protocols require another reviewed adapter.
 - Desktop: 12 React tests passed; TypeScript/Vite and unsigned Apple Silicon
   `gravity.app` build passed. Native app launches using the existing vault; Privacy shows live registration
   and fees. A real pool-registration proof succeeded on the configured prover,
-  and its final public call obtained a mainnet fee estimate. No broadcast.
+  and its final public call obtained a mainnet fee estimate. A user-approved
+  registration then succeeded with an accepted on-chain receipt and matching key.
 - SDK dependency tree still has audit findings in upstream development tooling;
   excluded from the shipped worker by a checked build graph. See provenance.
 
@@ -50,7 +51,7 @@ Different pool ABIs or compliance protocols require another reviewed adapter.
 - Operator-authorized screening integration for screened deposits. A plain
   self-hosted prover does not provide that authorization.
 - Live accepted receipts and discovered balances for shield → transfer → withdraw
-  through this integration. No live privacy transaction was sent by this change.
+  through this integration. Registration is live-verified; shield/transfer/withdraw remain unverified.
 
 ## Remaining
 

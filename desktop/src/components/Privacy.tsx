@@ -129,7 +129,7 @@ export function Privacy({status}: {status: Status}) {
         <dt>Registration</dt><dd>{data.registered?(data.registration_mature?"Registered":"Registered · settling…"):"Not registered with this pool"}</dd></dl>
       {!data.registered&&<><p className="muted small">Register once to use this pool. Click Register, approve the fees once, and gravity handles the rest.</p><button className="primary" disabled={disabled} onClick={()=>prepare("register")}>Register</button></>}
     </div>}
-    {data?.registered&&!review&&!submitted&&<div className="privacy-card">
+    {data?.registered&&!review&&(!submitted||accepted||receipt?.execution_status==="REVERTED")&&<div className="privacy-card">
       <label htmlFor="privacy-operation">Action</label>
       <select id="privacy-operation" className="input" value={operation} disabled={Boolean(busy)} onChange={e=>setOperation(e.target.value as Operation)}>
         <option value="deposit">Shield STRK</option><option value="transfer">Private transfer</option><option value="withdraw">Unshield STRK</option>
@@ -152,15 +152,16 @@ export function Privacy({status}: {status: Status}) {
       <p className="muted small">Approve or reject in the wallet confirmation dialog.</p>
     </div>}
     {submitted&&<div className="privacy-card" role="status">
-      <h3>{accepted?"Transaction accepted":receipt?.execution_status==="REVERTED"?"Transaction reverted":"Transaction submitted — checking required"}</h3>
-      <code className="addr">{submitted.transaction_hash}</code>
-      <p className="muted small">{submitted.status==="submission_unknown"?"The network response was uncertain. Check this hash before trying anything again.":"Keep this hash. Only a successful receipt confirms the operation."}</p>
-      {receipt&&<p>{receipt.execution_status} · {receipt.finality_status}{receipt.block_number?` · block ${receipt.block_number}`:""}</p>}
-      <div className="privacy-actions"><button className="ghost" disabled={Boolean(busy)} onClick={checkReceipt}>Check receipt</button>
-        {(accepted||receipt?.execution_status==="REVERTED")&&<button className="primary" disabled={Boolean(busy)} onClick={()=>{setSubmitted(null);setReceipt(null);}}>Done</button>}</div>
+      {accepted?<><p>✓ Transaction accepted. You can continue.</p><details><summary>View receipt</summary><code className="addr">{submitted.transaction_hash}</code><p className="muted small">{receipt?.execution_status} · {receipt?.finality_status} · block {receipt?.block_number}</p></details></>:<>
+        <h3>{receipt?.execution_status==="REVERTED"?"Transaction reverted":"Waiting for confirmation…"}</h3>
+        <code className="addr">{submitted.transaction_hash}</code>
+        <p className="muted small">{submitted.status==="submission_unknown"?"The network response was uncertain. Checking the hash automatically; no payment is being retried.":"gravity is checking the receipt automatically."}</p>
+        {receipt&&<p>{receipt.execution_status} · {receipt.finality_status}</p>}
+        <button className="ghost" disabled={Boolean(busy)} onClick={checkReceipt}>Check now</button>
+      </>}
     </div>}
     {history.length>0&&<details className="privacy-card"><summary>Recent privacy transactions</summary>{history.map(h=><div key={h.transaction_hash}><code className="addr">{h.transaction_hash}</code><button className="ghost" disabled={Boolean(busy)} onClick={()=>{setSubmitted(h);setReceipt(null);}}>Open receipt check</button></div>)}</details>}
     {busy&&<p className="privacy-progress" role="status">{busy}</p>}
-    {error&&<div className="privacy-error" role="alert"><p>{error}</p><button className="ghost" disabled={Boolean(busy)} onClick={()=>{setError("");setReview(null);}}>Back to privacy</button></div>}
+    {error&&<div className="privacy-error" role="alert"><p>{error}</p><button className="ghost" disabled={Boolean(busy)} onClick={()=>{setError("");setReview(null);}}>Dismiss</button></div>}
   </section>;
 }

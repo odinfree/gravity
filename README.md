@@ -68,6 +68,7 @@ Packages credential. [Provenance and licenses](privacy/PROVENANCE.md).
 5. Click **Register**, **Shield STRK**, **Private transfer** or **Unshield**.
    gravity prepares the proof and opens one approval for the amount and fees.
 6. Receipt checks and the registration/balance update run automatically.
+   Success returns directly to the action form; there is no Done step.
    Dependent actions wait until accepted state is mature.
 
 For screened pools, the prover must return the pool's screening attestation.

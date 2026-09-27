@@ -9,6 +9,20 @@ Use the [entry template](#entry-template) at the bottom for every new entry.
 ---
 
 
+## 2026-09-27 — Live registration and removal of the Done step
+
+- Independently confirmed a user-approved registration with a successful accepted
+  mainnet receipt and the wallet's registered/key-matching state. No account,
+  receipt hash or private operator data is included in this public log.
+- Removed the success-screen Done gate: the next action form appears as soon as
+  the receipt is accepted; receipt details are optional. The exact final spending
+  approval remains. Extended the UI regression test for immediate continuation.
+- The earlier entry's no-broadcast statement describes implementation testing
+  before that user-approved registration. Shield/transfer/withdraw acceptance and
+  the independent security review remain outstanding.
+- Frontend tests and production build passed; packaged app updated.
+
+
 ## 2026-09-27 — gravity fork and Starknet privacy stack integration
 
 **Did**

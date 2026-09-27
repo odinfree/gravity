@@ -19,11 +19,13 @@ test('account status is automatic and one action opens the approval flow for exa
   assert.equal(calls.find(c=>c.method==='prepare')!.value.chain_id,'0x534e5f4d41494e');
   assert.equal(calls.filter(c=>c.method==='submit').length,1);
   assert.match(host.textContent!,/Transaction accepted/);
+  assert.ok(![...host.querySelectorAll('button')].some(b=>b.textContent==='Done'));
+  assert.ok(!button('Shield STRK').disabled,'accepted transaction returns directly to actions');
 });
 test('screening failures leave the wallet with no submission path',async()=>{
   api.privacyPrepare=async()=>{throw new Error('Screening signature required');};
   await click('Shield STRK');assert.match(host.querySelector('[role="alert"]')!.textContent!,/Screening/);
-  assert.ok(!calls.some(c=>c.method==='submit'));await click('Back to privacy');
+  assert.ok(!calls.some(c=>c.method==='submit'));await click('Dismiss');
   assert.equal(host.querySelector('[role="alert"]'),null);
 });
 test('rejecting the wallet approval never claims a transaction was accepted',async()=>{
