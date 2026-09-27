@@ -16,6 +16,7 @@ pub mod error;
 pub mod jsonrpc;
 pub mod log;
 pub mod node;
+pub mod privacy;
 pub mod server;
 pub mod session;
 pub mod store;

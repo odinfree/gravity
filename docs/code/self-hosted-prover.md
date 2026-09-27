@@ -6,14 +6,15 @@ approval flow. The service receives the signed virtual transaction and returns
 the proof; this backend starts no local prover process and broadcasts nothing.
 
 This is a transport adapter for `companion_prove` and compatible
-`companion_signAndProve` requests. It does not implement the deferred
-`wallet_strk20*` methods, pool-action construction, discovery, or viewing-key
-management. Those remain Phase 3 work.
+`companion_signAndProve` requests. The wallet now layers the [privacy stack](privacy-stack.md) above it for
+pool-action construction, discovery and viewing-key management. The standard
+`wallet_strk20*` methods remain deferred; use the native Privacy page or
+`companion_privacy*`.
 
 ## Configure
 
 1. Keep the service bound to loopback on its host. If it runs on another machine,
-   establish an SSH tunnel from the machine running `strkd`, for example:
+   establish an SSH tunnel from the machine running `gravity`, for example:
 
    ```sh
    ssh -N -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 \
@@ -47,6 +48,7 @@ URL. The prover's own blockchain RPC credential stays in its service config.
 The optional Tauri config leaves native prover resources out of the app:
 
 ```sh
+npm --prefix privacy ci
 cd desktop
 npm ci
 npm run tauri build -- --config tauri.self-hosted.conf.json --bundles app

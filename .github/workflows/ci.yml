@@ -1,0 +1,22 @@
+name: gravity checks
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - run: npm --prefix privacy ci && npm --prefix desktop ci
+      - run: npm --prefix privacy run build && npm --prefix privacy test
+      - run: npm --prefix desktop test && npm --prefix desktop run build
+      - run: cargo build --locked && cargo test --locked && cargo clippy --locked --all-targets -- -D warnings
+      - name: SDK and Rust signing pipeline (synthetic loopback services)
+        run: STRKD_PRIVACY_NODE="$(command -v node)" cargo test --locked -p wallet-rpc --test privacy_pipeline -- --ignored

@@ -1,5 +1,5 @@
 {
   "bundle": {
-    "resources": []
+    "resources": ["resources/privacy/worker.cjs"]
   }
 }

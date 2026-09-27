@@ -1,5 +1,7 @@
 # `wallet-rpc` — Reference
 
+`privacy.rs` now owns the authenticated `companion_privacy*` flow, isolated SDK worker, constrained signer callbacks, expiring reviews and submission journal. See [privacy stack](privacy-stack.md); standard `wallet_strk20*` remains deferred.
+
 The local JSON-RPC service. It implements the read-only + signing slice of the
 standard `wallet_*` API plus the `companion_*` extensions (spec §7), with
 pairing-based caller authentication (§5.5) and a blocking approval broker (§8).

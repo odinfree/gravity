@@ -58,9 +58,24 @@ body {
 
 .tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
   padding: 8px 12px 0;
 }
+
+.privacy-panel { display: flex; flex-direction: column; gap: 12px; }
+.privacy-title { display: flex; align-items: center; gap: 12px; }
+.privacy-title h2 { margin: 0; }
+.privacy-card { padding: 16px; border: 1px solid var(--border, #29313c); border-radius: 12px; display: flex; flex-direction: column; gap: 10px; }
+.privacy-card h3, .privacy-card p { margin: 0; }
+.privacy-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.privacy-balances { display: grid; grid-template-columns: 1fr auto; gap: 10px; margin: 0 0 10px; }
+.privacy-balances dt { color: var(--muted); }
+.privacy-balances dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.privacy-panel .addr { overflow-wrap: anywhere; white-space: normal; }
+.privacy-panel label { font-size: 13px; color: var(--muted); }
+.privacy-progress { border-left: 3px solid #7187ff; padding: 12px; background: #7187ff16; }
+.privacy-error { border: 1px solid #d98383; padding: 12px; border-radius: 10px; overflow-wrap: anywhere; }
 .tab {
   background: none;
   border: none;

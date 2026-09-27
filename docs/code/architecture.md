@@ -1,5 +1,7 @@
 # Code Architecture
 
+gravity adds a wallet-owned Node 24+ SDK worker under `privacy/`. Pool adapters are separate from the wallet signer, prover and discovery transport. See [privacy stack](privacy-stack.md) for the implemented STRK20 adapter and trust boundary.
+
 A map of the codebase: what exists, what's planned, and where the security
 boundaries are. For *why* the system is shaped this way, read the technical spec
 ([`spec/wallet-companion-spec.md`](../../spec/wallet-companion-spec.md)) — this

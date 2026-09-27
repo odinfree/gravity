@@ -8,6 +8,60 @@ Use the [entry template](#entry-template) at the bottom for every new entry.
 
 ---
 
+
+## 2026-09-27 — gravity fork and Starknet privacy stack integration
+
+**Did**
+- Created a separate local gravity wallet fork with lowercase app/CLI branding,
+  independent GitHub repository metadata and self-hosted desktop build workflow.
+  Preserved upstream attribution and the legacy data identifier so existing
+  accounts, settings and pairings are reused without seed migration.
+- Added a native Privacy screen and authenticated `companion_privacy*` methods:
+  registration, note discovery, shield/private transfer/unshield preparation,
+  amount/fee review, final approval, receipt history and uncertain-submit recovery.
+- Split the wallet-managed Node SDK runtime from its first STRK20 v2 pool adapter.
+  Pool, discovery endpoint and deposit policy are per-network. Known deployments
+  require screening; custom compatible pools may enforce their own policy.
+  Other ABIs/proof formats and compliance protocols need another adapter.
+- Added a versioned seed-derived viewing key, private stdio worker, constrained
+  Rust signing callbacks, signed/proven payload matching, explicit chain checks,
+  mature state, exact allowances and privacy payload redaction. The worker receives
+  viewing material but no seed or spending key. Trusted services see private inputs.
+- Persisted the selected network, added public agent usage docs and a pinned SDK
+  archive/lockfiles. The bundle build rejects upstream devnet/archive-extraction
+  modules in the shipped worker; dependency audit findings are still disclosed.
+
+**Verification**
+- Workspace build + 146 tests and strict clippy passed. The explicitly requested
+  SDK pipeline test passed with a public test seed and synthetic loopback node/proof,
+  including signature verification, foreign review rejection, one-shot unknown
+  submission handling and receipt reconciliation. No mainnet operation was sent.
+- 14 SDK tests passed, including positive register/deposit/transfer/withdraw
+  builders, missing screening, alternate policy, stale/fresh notes and chain guards.
+- 12 React tests passed; frontend build and unsigned Apple Silicon gravity.app
+  build passed. Native app opens the existing vault under lowercase gravity branding.
+- Source checks found no RPC credentials, private wallet state or operator-project
+  details in the publication tree. This is not an independent security audit.
+
+**Security review / limitations**
+- New derivation/crypto and final pool-action paths are **Blocked (needs review)**
+  for production mainnet. Inherited portability/isolation audit gates remain open.
+  The new KDF has a public recovery vector; it does not claim another wallet's
+  viewing-key compatibility. Retain its version/salt after registration.
+- The screened-pool route requires operator-issued screening integration.
+  Live shield/private-transfer/withdraw acceptance and note reconciliation are
+  unverified in this integration. Self-hosting alone does not supply screening.
+- Ambiguous broadcasts are never automatically retried; unresolved records block
+  further privacy actions until receipt reconciliation. Already-dispatched remote
+  proofs cannot be recalled when the wallet locks.
+- Live UI testing caught a missing `account_deployment_data` field in final
+  fee estimation. Added it and a regression assertion; the public mainnet node
+  then estimated the real registration proof successfully. No broadcast occurred.
+- Simplified native actions: click Register/Shield once, approve exact fees once,
+  then automatic receipt polling and balance/registration refresh.
+- Standard wallet_strk20 methods remain deferred. This wallet is the broader
+  Starknet privacy stack; STRK20 is its first adapter, not its identity.
+
 ## 2026-09-27 — Clear new-wallet setup and Back navigation
 
 **Did**

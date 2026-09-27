@@ -15,6 +15,7 @@ pub mod class_hash;
 pub mod domain;
 pub mod error;
 pub mod keys;
+pub mod privacy;
 pub mod tx;
 pub mod vault;
 

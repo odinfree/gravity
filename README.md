@@ -1,216 +1,135 @@
-# strkd — Starknet Wallet Companion
+# gravity
 
-A desktop **menu-bar companion wallet** for Starknet. It stores a seed safely,
-derives multiple accounts from it, and exposes a local service that other
-programs on the same machine — AI agents, desktop apps — can call to request
-wallet operations. The wallet never returns private keys; it returns signed
-payloads (and can broadcast on request). Every signing or state-changing request
-pops a menu-bar confirmation, and all requests are logged.
+A local agent wallet for the **Starknet privacy stack**. Create accounts, pair an
+agent, generate proofs with your own prover, and review transactions in a desktop
+app. Signing keys stay in the Rust wallet core.
 
-It speaks the standard Starknet
-[`wallet_rpc.json`](https://github.com/starkware-libs/starknet-specs/blob/master/wallet-api/wallet_rpc.json)
-API plus a small `companion_*` extension namespace, and delegates cryptography to
-[`krusty-kms`](https://github.com/starknet-innovation/krusty-kms).
+**STRK20 is the first pool adapter, not the wallet's identity.** This version
+supports registration, shielded STRK balances, shielding, private transfers and
+unshielding through STRK20 v2-compatible contracts. Pool addresses, discovery
+services and deposit policy are configurable per network. Different contract
+interfaces or compliance protocols require another adapter; they are not
+implemented automatically by changing an address.
 
-It also bundles an **on-device proving companion** (the `prover` crate, merged
-from [`dinner`](https://github.com/starknet-innovation/dinner)): hand it an
-already-signed payload via `companion_prove` and it generates a SNIP-36 proof
-locally — the secret never leaves the machine. `companion_signAndProve` goes one
-step further, signing the private virtual transaction and proving it in a single
-call. The prover holds no signing keys and sits strictly downstream of signing.
+This is an independent fork of
+[starknet-innovation/strkd](https://github.com/starknet-innovation/strkd), retaining
+its wallet core, agent pairing, approval flow and proving infrastructure. Privacy
+actions use the [Starknet privacy SDK](https://github.com/starkware-libs/starknet-privacy/tree/main/sdk).
+It is a complete wallet repository, independent of any skills collection.
 
-To use an existing Starknet transaction prover, select the **`starknet-rpc`**
-backend. It sends signed virtual transactions to your service, including over
-an SSH tunnel, and starts no bundled prover. See the
-[self-hosted prover guide](./docs/code/self-hosted-prover.md) for setup and a
-desktop build that excludes native prover resources. This adds the proving
-transport; the full `wallet_strk20*` wallet methods remain unfinished.
+## What is implemented
 
-> ⚠️ **Experimental. Not for real funds.** `krusty-kms` is flagged experimental
-> by its authors and the crypto path is unaudited. Use **throwaway test seeds
-> only** — never a real mnemonic or a seed controlling funds. See the security
-> notes in the [spec](./spec/wallet-companion-spec.md) §14.
+- Create a new seed wallet, additional accounts and scoped agent accounts.
+- Desktop **Privacy** tab: register, check balances, shield, transfer, unshield,
+  review amount and fees, and reconcile transaction receipts.
+- Your own Starknet transaction prover over HTTPS or a loopback SSH tunnel.
+- A separate discovery service, with its address kept in local settings.
+- Pool policy profiles: screening required, or contract-enforced policy for
+  custom compatible pools. The known STRK20 deployments require screening.
+- Authenticated agent methods for preparation, approval and receipt recovery.
+- Exact token allowances, explicit networks, mature proof state, expiring reviews
+  and no automatic broadcast retries after an uncertain response.
 
-## Status
+A prepared proof is not a completed payment. A successful accepted receipt and
+refreshed note balances establish the result. The standard `wallet_strk20*`
+methods are still deferred; this fork exposes `companion_privacy*` methods.
 
-All three layers are built. The crypto core (`wallet-core`) and the loopback
-service (`wallet-rpc`) are green — **140 workspace tests, strict clippy clean** — covering
-derivation, signing, the vault, the full `wallet_*` + `companion_*` handlers,
-auth, the approval broker, permission grants, and the request log. The Tauri
-menu-bar app (`desktop/`) compiles and its frontend builds, but the **GUI is not
-yet run-verified** (tray, dialogs, notifications, auto-lock, Dock icon need a
-human launch). Broadcasting + fee estimation work against a node configured in
-the Settings tab; Sepolia reads/estimates are live-verified, while the broadcast
-hop still needs a funded-account submit.
+## Build and run
 
-The `prover` crate is built and tested (the success path via a test-only stub
-`Prover`, since there is **no mock backend** — all real backends fail honestly
-when unconfigured), with `companion_prove*` covered end-to-end in the `wallet-rpc`
-dispatch tests. The native SNIP-36 backend is **live-verified on Sepolia
-(2026-07-02, prover pin `v1.2.2`)**: it generated a proof-carrying invoke
-on-device that **verified on-chain**. Next up: **Phase 3** (Tongo / STRK20).
+Requirements: Rust stable, Node.js **24+**, npm, and the platform dependencies
+for [Tauri 2](https://v2.tauri.app/start/prerequisites/). The private SDK worker is
+bundled as JavaScript; **Node itself is required on the machine running the app**.
 
-For the authoritative, always-current state, see
-**[`docs/project/status.md`](./docs/project/status.md)**.
-
-## Build & test
-
-The headless core (`wallet-core` + `wallet-rpc`):
-
-```bash
-cargo build
-cargo test                  # core + service test suite
-cargo clippy --all-targets  # lint
-```
-
-The desktop menu-bar app (**Tauri 2 + React + TypeScript + Vite**), under
-`desktop/`:
-
-```bash
+```sh
+git clone https://github.com/odinfree/gravity.git
+cd gravity
+npm --prefix privacy ci
+npm --prefix desktop ci
 cd desktop
-npm install
-npm run tauri dev           # dev (hot reload; child processes — for development)
-npm run tauri build         # build an installable bundle (recommended for use)
-#   → src-tauri/target/release/bundle/macos/strkd.app  (drag to /Applications)
-```
-Install the built `strkd.app` and launch it like any app — it shows in the Dock
-and lives in the menu bar (the tray); closing the window only hides it, and
-clicking the Dock icon re-shows it. Quit cleanly via the tray → Quit. Set the
-Starknet RPC endpoint in the app's **Settings** tab to enable broadcasting + fee
-estimation.
-
-Requires a Rust toolchain (+ Node for the desktop app). The first core build
-fetches `krusty-kms` from git (pinned commit), so it needs network access. The
-desktop crate is its own Cargo crate, excluded from the root workspace, and
-reuses the core crates by path.
-
-> The headless core is covered by automated tests. The desktop GUI is **built
-> but not run-verified** — confirming the tray/onboarding/approval flows means
-> running the app on a machine with a display.
-
-## The `strkd` CLI
-
-`strkd` (crate `wallet-cli`) is a thin command-line client for the running
-menu-bar app. It holds no keys — it discovers the app's loopback service via
-`port.lock`, pairs once, and speaks the same `wallet_*` / `companion_*` API that
-agents use. Signing and approvals still happen in the app.
-
-```bash
-strkd pair --name my-cli   # one-time; approve the prompt in the menu bar
-strkd status               # lock state, network, grant
-strkd accounts             # accounts this client may use
-strkd usage                # the wallet's self-describing API doc
-strkd sign  --account 0x… --data @typed_data.json
-strkd send  --account 0x… --to 0x… --function transfer --calldata 0x…,0x…
-strkd send  … --submit     # broadcast (IRREVERSIBLE); default is sign-only
+npm run tauri build -- --config tauri.self-hosted.conf.json --bundles app --no-sign
 ```
 
-Add `--json` for a clean machine contract (only JSON on stdout; errors as
-`{"error": …}` on stderr) and `-q`/`--quiet` to drop progress text — both work
-before or after the subcommand, so `strkd accounts --json | jq` pipes cleanly.
+On macOS, open `desktop/src-tauri/target/release/bundle/macos/gravity.app`.
+This build uses your configured prover; it does not bundle a native prover.
+For development, build the worker with `npm run build:privacy`, then run
+`npm run tauri dev` from `desktop/`.
 
-### Install
+The SDK package is vendored from its public source so this build needs no GitHub
+Packages credential. [Provenance and licenses](privacy/PROVENANCE.md).
 
-From this repo (needs a Rust toolchain):
+## Set up privacy
 
-```bash
-cargo install --path crates/wallet-cli   # installs the `strkd` binary
+1. Create/unlock your wallet and select the intended network.
+2. In **Settings**, configure its blockchain RPC. Select `starknet-rpc` under
+   Proving, enter your prover endpoint, save and restart.
+3. Open **Privacy → Privacy services**. Select a compatible pool, its deposit
+   policy and your discovery endpoint. Services must use the same chain/pool.
+4. Fund and deploy the account. Privacy checks its pool registration automatically.
+5. Click **Register**, **Shield STRK**, **Private transfer** or **Unshield**.
+   gravity prepares the proof and opens one approval for the amount and fees.
+6. Receipt checks and the registration/balance update run automatically.
+   Dependent actions wait until accepted state is mature.
+
+For screened pools, the prover must return the pool's screening attestation.
+A bare self-hosted prover does **not** supply screening authorization; shielding
+stops before submission if the required attestation is missing. Choosing a
+custom policy cannot bypass an existing pool's contract rules.
+
+[Complete privacy guide](docs/code/privacy-stack.md) ·
+[Self-hosted prover setup](docs/code/self-hosted-prover.md) ·
+[Documentation index](docs/index.md)
+
+## Agents and CLI
+
+Open **Connect** and copy the prompt for your agent. The local endpoint describes
+its API at `GET /`; pair once, then use `companion_privacyStatus`,
+`companion_privacyBalances`, `companion_privacyPrepare`, `companion_privacySubmit`,
+`companion_privacyReceipt` and `companion_privacyHistory`.
+
+Privacy spending always requires a concrete on-screen approval, including for
+agents with generic auto-approval grants. Preparation never broadcasts.
+
+```sh
+cargo install --path crates/wallet-cli
+gravity pair --name my-agent
+gravity accounts
+gravity usage
 ```
 
-Prebuilt binaries are distributed with [cargo-dist](https://opensource.axo.dev/cargo-dist/).
-Once a release is cut, end users install without a toolchain via Homebrew or the
-shell installer:
+For upgrade compatibility, the app still uses the legacy `org.starknet.strkd`
+identifier/data directory and `STRKD_*` configuration variables. Existing vaults,
+accounts and pairings are preserved. Do not run upstream strkd and gravity
+against that same data directory at the same time.
 
-```bash
-brew install starknet-innovation/tap/strkd
-# or:
-curl -LsSf https://github.com/starknet-innovation/strkd/releases/latest/download/strkd-installer.sh | sh
+## Verification and limits
+
+```sh
+cargo build
+cargo test
+cargo clippy --all-targets -- -D warnings
+npm --prefix privacy run build
+npm --prefix privacy test
+npm --prefix desktop test
+npm --prefix desktop run build
+# Requires the built worker and Node 24+; entirely synthetic local services:
+cargo test -p wallet-rpc --test privacy_pipeline -- --ignored
 ```
 
-**Maintainers — first-time release setup.** The dist *policy* lives in
-`[workspace.metadata.dist]` (root `Cargo.toml`); the release workflow is
-generated, never hand-edited. Bootstrap once:
+Automated tests cover the real SDK/stdio/signing pipeline using synthetic chain
+and proof responses. They do not establish live pool acceptance. Live shielding,
+private transfer and withdrawal acceptance for this new integration remain to be
+verified with authorized test funds and the chosen pool's services.
 
-```bash
-cargo install cargo-dist           # or: curl --proto '=https' --tlsv1.2 -LsSf https://github.com/axodotdev/cargo-dist/releases/latest/download/cargo-dist-installer.sh | sh
-dist init                          # pins cargo-dist-version, writes .github/workflows/release.yml
-git tag v0.1.0 && git push --tags  # tag → CI builds binaries + publishes installers
-```
-
-Re-run `dist generate` after editing the dist config. While strkd is **alpha
-(test seeds only)**, keep the public Homebrew/curl channels gated and prefer
-`cargo install` for internal dogfooding.
-
----
-
-## Documentation
-
-All documentation is indexed in **[`docs/index.md`](./docs/index.md)** — that is
-the single entry point; start there if you're unsure where to look. The docs are
-organized into three areas by the question they answer:
-
-| Area | Location | Answers | Start with |
-|---|---|---|---|
-| **Design** | [`spec/`](./spec/) | *Why* and *what* we're building | [`spec/wallet-companion-spec.md`](./spec/wallet-companion-spec.md) |
-| **Code** | [`docs/code/`](./docs/code/) | *How* the implementation works | [`docs/code/architecture.md`](./docs/code/architecture.md) (then `wallet-core.md`, `wallet-rpc.md`, `desktop.md`) |
-| **Project** | [`docs/project/`](./docs/project/) | *Where we are* and *how we work* | [`docs/project/status.md`](./docs/project/status.md) |
-
-### How to find what you need
-
-- **"What is this and how is it designed?"** → the spec, starting at
-  [`spec/wallet-companion-spec.md`](./spec/wallet-companion-spec.md).
-- **"How does the code work / where is X implemented?"** →
-  [`docs/code/architecture.md`](./docs/code/architecture.md) for the map, then
-  the per-crate reference (e.g.
-  [`docs/code/wallet-core.md`](./docs/code/wallet-core.md)).
-- **"What's done, what's left, what should I do next?"** →
-  [`docs/project/status.md`](./docs/project/status.md) (the **Resume here**
-  section at the top).
-- **"Why is the code in its current state?"** →
-  [`docs/project/progress-log.md`](./docs/project/progress-log.md).
-
-### Project management
-
-How development is tracked and handed off — what's been done, what remains, how
-to log progress, and how to pick up where the last session stopped — is governed
-by **[`docs/project/workflow.md`](./docs/project/workflow.md)**. Read it before
-doing project work; it is prescriptive. In short:
-
-- [`status.md`](./docs/project/status.md) is the mutable **snapshot** of now.
-- [`progress-log.md`](./docs/project/progress-log.md) is the append-only
-  **history**.
-- [`workflow.md`](./docs/project/workflow.md) is the **process** (and the
-  security gates).
-
----
+**Experimental and unaudited. DYOR.** Inspect the code, pool and compliance model;
+understand the fees and trust assumptions before using it. The new viewing-key
+and signing paths need independent security review before production use. There
+is no guarantee of privacy, compliance, recovery or financial safety. Provers and
+discovery operators receive private/viewing material; use services you trust.
 
 ## Contributing to the documentation
 
-Keep docs navigable by following these rules. They are not optional — drift here
-makes the whole tree untrustworthy.
-
-1. **Three homes, by purpose.** Design → [`spec/`](./spec/). Code → [`docs/code/`](./docs/code/).
-   Project management → [`docs/project/`](./docs/project/). Put a doc where its
-   *question* belongs, not where it's convenient.
-2. **One topic per file; one fact in one place.** Don't restate the spec in a
-   code doc or vice versa — **link** to the source of truth. Duplication is the
-   main thing we're preventing.
-3. **Index everything.** Every doc file must be listed in
-   [`docs/index.md`](./docs/index.md). Adding a doc without indexing it is an
-   incomplete change. When you add a whole new *area*, add a row to the
-   Documentation table above too.
-4. **One crate → one reference.** When a new crate is built, add
-   `docs/code/<crate>.md` and link it from
-   [`docs/code/architecture.md`](./docs/code/architecture.md) and the index.
-5. **Naming & links.** Files are `kebab-case.md`. Use **relative** links between
-   docs so they work on disk and in any viewer. Use absolute `YYYY-MM-DD` dates.
-6. **Docs ship with the change.** Code changes update the relevant code doc in
-   the same change; project state changes update `status.md` and append to
-   `progress-log.md` (per [`workflow.md`](./docs/project/workflow.md)).
-7. **Don't break the boundary in prose.** When documenting anything that touches
-   keys, reinforce the security boundary; never include real seed/key material
-   in an example.
-
-If you're unsure where something goes, it almost always belongs in exactly one
-of the three areas above — pick by the question it answers, then link it from the
-index.
+Add new docs to [docs/index.md](docs/index.md). Update the current
+[status](docs/project/status.md) and append a [progress entry](docs/project/progress-log.md)
+with meaningful changes. Preserve upstream attribution and license notices.
+Never commit a seed, private key, viewing key, RPC credential, wallet state or
+agent bearer token.

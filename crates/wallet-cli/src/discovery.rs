@@ -29,7 +29,7 @@ pub fn service_url() -> Result<String, String> {
     let path = data_dir()?.join("port.lock");
     let bytes = std::fs::read(&path).map_err(|_| {
         format!(
-            "strkd doesn't look like it's running — no port.lock at {}.\n\
+            "gravity doesn't look like it's running — no port.lock at {}.\n\
              Start the menu-bar app, then try again.",
             path.display()
         )

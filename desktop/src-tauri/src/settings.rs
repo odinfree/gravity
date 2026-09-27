@@ -19,6 +19,8 @@ fn default_auto_lock_minutes() -> u64 {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Settings {
     #[serde(default)]
+    pub last_network: String,
+    #[serde(default)]
     pub sepolia_rpc: String,
     #[serde(default)]
     pub mainnet_rpc: String,
@@ -30,6 +32,7 @@ pub struct Settings {
 impl Default for Settings {
     fn default() -> Self {
         Settings {
+            last_network: String::new(),
             sepolia_rpc: String::new(),
             mainnet_rpc: String::new(),
             auto_lock_minutes: default_auto_lock_minutes(),

@@ -1,8 +1,8 @@
 [package]
-name = "strkd-desktop"
+name = "gravity-desktop"
 version = "0.1.0"
 edition = "2021"
-description = "strkd — Starknet wallet companion (desktop menu-bar app)"
+description = "gravity — Starknet wallet companion (desktop menu-bar app)"
 
 [lib]
 name = "strkd_desktop_lib"

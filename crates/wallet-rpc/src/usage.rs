@@ -15,8 +15,8 @@ use serde_json::{json, Value};
 /// Build the usage document. `api_version` / `spec_versions` come from
 /// `ServerState`.
 pub fn usage_doc(api_version: &str, spec_versions: &[String]) -> Value {
-    json!({
-        "service": "strkd — Starknet wallet companion",
+    let mut doc = json!({
+        "service": "gravity — Starknet wallet companion",
         "version": env!("CARGO_PKG_VERSION"),
         "wallet_api_version": api_version,
         "supported_specs": spec_versions,
@@ -28,20 +28,20 @@ never keys. It also PROVES SNIP-36 transactions on-device (sign + prove a privat
 one call, then broadcast the verifier tx) — see concepts.proving + snip36_proving.",
 
         "alpha_notice": {
-            "status": "strkd is ALPHA software under active development. Expect missing methods, \
+            "status": "gravity is ALPHA software under active development. Expect missing methods, \
 rough edges, partial features, and capabilities that simply do not exist yet.",
             "do_not_work_around": "If you hit a limitation — a missing method, a confusing or \
 unexpected error, a parameter that isn't accepted, or behaviour that blocks your task — DO NOT \
 invent a workaround, fake or guess a result, fall back to handling keys/seeds/signing yourself, \
 or silently abandon the step. A workaround hides the gap and makes it permanent. STOP and report \
-it instead. The maintainer reads these reports and fixes strkd, so a clear report is the FASTEST \
+it instead. The maintainer reads these reports and fixes gravity, so a clear report is the FASTEST \
 path to the capability you want.",
-            "call_to_action": "Tell your operator (the human running strkd) exactly what you need, \
+            "call_to_action": "Tell your operator (the human running gravity) exactly what you need, \
 using the report format below. Emit the filled-in block VERBATIM in your reply to them — don't \
-just mention it in passing. They relay it to the strkd maintainer.",
+just mention it in passing. They relay it to the gravity maintainer.",
             "github_shortcut": "Faster path when your operator can reach the repo: call \
 companion_reportIssue with these same fields and you get back a PREFILLED GitHub new-issue `url`. \
-Hand them the url — they open it, review/edit, and submit in their own browser. strkd files nothing \
+Hand them the url — they open it, review/edit, and submit in their own browser. gravity files nothing \
 itself and holds no GitHub token. The STRKD-FEEDBACK block below is the universal fallback when \
 they can't (or don't want to) use GitHub.",
             "report_format": "Copy this block, fill every field, and hand it to your operator verbatim:\n\n\
@@ -49,11 +49,11 @@ they can't (or don't want to) use GitHub.",
 goal:        <the task you were trying to accomplish, one line>\n\
 attempted:   <method(s) + params you called — or \"no method exists for this\">\n\
 observed:    <the exact JSON-RPC error code + message, or \"capability missing\">\n\
-limitation:  <what strkd could not do, stated plainly>\n\
+limitation:  <what gravity could not do, stated plainly>\n\
 needed:      <the specific method / param / behaviour that would unblock you>\n\
 impact:      <blocked | degraded | cosmetic> — <what you could NOT do as a result>\n\
 workaround_avoided: <what you were tempted to do instead, so we can design it away; \"none\" if N/A>\n\
-context:     strkd v<version> · network <from companion_getStatus> · <UTC timestamp>\n\
+context:     gravity v<version> · network <from companion_getStatus> · <UTC timestamp>\n\
 === END ===",
             "guidance": [
                 "One report per distinct limitation — don't batch unrelated gaps into one block.",
@@ -103,7 +103,7 @@ grant your client a time-bounded auto-approval window (up to 3 months, revocable
 own-account operations (sign/invoke/declare/deploy/create) run WITHOUT a prompt. \
 companion_requestFunding ALWAYS prompts, grant or not. Check companion_getStatus.grant to see if a \
 grant is active; request one yourself with companion_requestGrant (always prompts).",
-            "proving": "strkd bundles an ON-DEVICE prover for SNIP-36 (prove a private Starknet \
+            "proving": "gravity supports a configured self-hosted or on-device prover for SNIP-36 (prove a private Starknet \
 computation off-chain, verify only the result on-chain). The prover holds NO keys — it proves an \
 ALREADY-SIGNED transaction. SNIP-36 is TWO transactions: (Tx A) a PRIVATE virtual invoke (e.g. \
 your contract's create_proof(public, private)) that is signed + proven off-chain and NEVER \
@@ -111,7 +111,7 @@ broadcast; (Tx B) a verifier invoke (e.g. verify_result(public_message)) broadca
 carrying proof_facts + proof. Fastest path: companion_signAndProve signs Tx A and proves it in one \
 call (your private inputs never leave this machine), then you broadcast Tx B yourself with \
 wallet_addInvokeTransaction {proof_facts, proof, submit:true}. See the snip36_proving flow below. \
-CRITICAL: a virtual tx carries PRIVATE calldata, so you MUST pass explicit resource_bounds — strkd \
+CRITICAL: a virtual tx carries PRIVATE calldata, so you MUST pass explicit resource_bounds — gravity \
 refuses to fee-estimate it (estimating online would send your private inputs to the RPC node). \
 Tx A is NOT proof-carrying (proof_facts are an OUTPUT of proving, not in Tx A's hash). Proving \
 needs the native prover (bundled on-device) or a configured remote prover, plus a per-network RPC, \
@@ -142,14 +142,14 @@ nonce + fee are auto-filled; without one, supply nonce + resource_bounds yoursel
         "snip36_proving": {
             "what": "Prove a PRIVATE Starknet computation off-chain (SNIP-36) and verify only the \
 result on-chain — your private inputs never leave this machine. It is a TWO-transaction flow; \
-strkd automates the key-holding half (sign + prove), you broadcast the verifier tx. See \
+gravity automates the key-holding half (sign + prove), you broadcast the verifier tx. See \
 concepts.proving.",
             "steps": [
                 "1. Build the VIRTUAL call (Tx A) — your contract's virtual function, e.g. create_proof(public_input, private_input). Choose resource_bounds MANUALLY (~2× current gas prices); do NOT estimate (that would leak your private calldata to the RPC node).",
-                "2. Sign + prove in one step: companion_signAndProve {account_address, calls, resource_bounds, nonce, block_number?, chainId?} → {job_id}. strkd signs Tx A and proves it on-device; the signed tx is never broadcast. (nonce must equal the account nonce at the reference block.)",
+                "2. Sign + prove in one step: companion_signAndProve {account_address, calls, resource_bounds, nonce, block_number?, chainId?} → {job_id}. gravity signs Tx A and sends it to the selected prover; the signed tx is never broadcast. (nonce must equal the account nonce at the reference block.)",
                 "3. Poll companion_proveStatus {job_id} until status is \"succeeded\" → result = {proof, proof_facts, l2_to_l1_messages} (or \"failed\" with an error).",
                 "4. Decode l2_to_l1_messages[0].payload into your verifier's public_message and build Tx B — the ON-CHAIN verifier call, e.g. verify_result(public_message).",
-                "5. Broadcast Tx B: wallet_addInvokeTransaction {account_address, calls:[<verifier call>], proof_facts, proof, resource_bounds, submit:true}. proof_facts extend the signed hash; proof rides along on broadcast (both required on submit). strkd cannot build Tx B for you — its calldata is app-specific.",
+                "5. Broadcast Tx B: wallet_addInvokeTransaction {account_address, calls:[<verifier call>], proof_facts, proof, resource_bounds, submit:true}. proof_facts extend the signed hash; proof rides along on broadcast (both required on submit). gravity cannot build Tx B for you — its calldata is app-specific.",
                 "Already hold a signed virtual tx (signed elsewhere)? Skip step 2 and call companion_prove {payload:{transaction:<signed invoke-v3>, block_number?}, network?} instead — same proof result."
             ]
         },
@@ -187,7 +187,7 @@ concepts.proving.",
             { "method": "companion_reportIssue", "auth": true, "prompts": false,
               "params": "{ goal, needed, attempted?, observed?, limitation?, impact?, workaround_avoided?, title? }",
               "returns": "{ url, title, body, repo, filed:false, instructions }",
-              "note": "strkd is alpha — when you hit a limitation, call this to turn your STRKD-FEEDBACK fields into a PREFILLED GitHub new-issue link. goal + needed are required; the rest mirror the report template. It files NOTHING and stores no credential — your operator opens the returned `url`, reviews/edits it, and submits it in their own browser (so repo access + human review are the gate). Works whether the wallet is locked or not. See alpha_notice." },
+              "note": "gravity is alpha — when you hit a limitation, call this to turn your STRKD-FEEDBACK fields into a PREFILLED GitHub new-issue link. goal + needed are required; the rest mirror the report template. It files NOTHING and stores no credential — your operator opens the returned `url`, reviews/edits it, and submits it in their own browser (so repo access + human review are the gate). Works whether the wallet is locked or not. See alpha_notice." },
             { "method": "companion_requestGrant", "auth": true, "prompts": true,
               "params": "{ days? }", "returns": "{ granted, expires_at, days }",
               "note": "Ask the user for an auto-approval window (1–90 days, default 30). Always prompts — a permission escalation is never auto-approved. While granted, your own-account ops skip prompts (funding still prompts). The user can also grant/revoke from the desktop Agents panel." },
@@ -218,14 +218,14 @@ concepts.proving.",
             { "method": "companion_signAndProve", "auth": true, "prompts": true,
               "params": "{ account_address, calls, resource_bounds, nonce?, block_number?, chainId?, label? }",
               "returns": "{ job_id, status: \"queued\", transaction_hash, next }",
-              "note": "ONE-STEP sign + on-device prove for SNIP-36: signs the VIRTUAL tx (\"Tx A\" — a normal v3 invoke calling your contract's virtual function, e.g. create_proof(public, private)) and hands the signed tx straight to the local prover, so the secret never leaves the machine and you skip the manual addInvoke(sign-only)→companion_prove round-trip. Tx A is NOT proof-carrying (proof_facts are an OUTPUT of proving). resource_bounds is REQUIRED — the virtual tx holds private calldata, so strkd refuses to fee-estimate it online (that would leak the inputs to the RPC); set bounds manually (~2× gas). nonce must equal the account nonce at the reference block. Returns a job id — poll companion_proveStatus; on success take result.proof / proof_facts / l2_to_l1_messages, decode the message into the verifier call, and BROADCAST the verifier invoke (\"Tx B\", e.g. verify_result(public_message)) via wallet_addInvokeTransaction { proof_facts, proof, submit:true }. strkd does not build Tx B — its calldata is app-specific. Approval-gated (signs a real tx, though it's proven locally and never broadcast)." },
+              "note": "ONE-STEP sign + on-device prove for SNIP-36: signs the VIRTUAL tx (\"Tx A\" — a normal v3 invoke calling your contract's virtual function, e.g. create_proof(public, private)) and hands the signed tx straight to the local prover, so private inputs go only to your selected prover and you skip the manual addInvoke(sign-only)→companion_prove round-trip. Tx A is NOT proof-carrying (proof_facts are an OUTPUT of proving). resource_bounds is REQUIRED — the virtual tx holds private calldata, so gravity refuses to fee-estimate it online (that would leak the inputs to the RPC); set bounds manually (~2× gas). nonce must equal the account nonce at the reference block. Returns a job id — poll companion_proveStatus; on success take result.proof / proof_facts / l2_to_l1_messages, decode the message into the verifier call, and BROADCAST the verifier invoke (\"Tx B\", e.g. verify_result(public_message)) via wallet_addInvokeTransaction { proof_facts, proof, submit:true }. gravity does not build Tx B — its calldata is app-specific. Approval-gated (signs a real tx, though it's proven locally and never broadcast)." },
 
             { "method": "wallet_signTypedData", "auth": true, "prompts": true,
               "params": "{ account_address, typed_data (SNIP-12 doc) }", "returns": "[r, s]",
               "note": "account_address must be one of yours. SNIP-12 REVISION 1 (Poseidon; StarkNet-Message prefix = short-string 'StarkNet Message'). The digest signed is exactly starknet.js typedData.getMessageHash(typed_data, account_address), so the account's on-chain is_valid_signature accepts [r, s] — that's the standard SNIP-12 committee/multisig approval pattern. To confirm the hash before/after signing, call companion_typedDataHash (no signing, no prompt)." },
             { "method": "companion_typedDataHash", "auth": true, "prompts": false,
               "params": "{ account_address, typed_data (SNIP-12 doc) }", "returns": "{ hash, revision: \"1\" }",
-              "note": "Pure, key-free: returns the SNIP-12 rev-1 message hash wallet_signTypedData would sign (== starknet.js typedData.getMessageHash). Use it to verify strkd's hashing matches yours and to know exactly which felt a returned [r, s] covers for is_valid_signature. Works while locked; no approval." },
+              "note": "Pure, key-free: returns the SNIP-12 rev-1 message hash wallet_signTypedData would sign (== starknet.js typedData.getMessageHash). Use it to verify gravity's hashing matches yours and to know exactly which felt a returned [r, s] covers for is_valid_signature. Works while locked; no approval." },
             { "method": "wallet_addInvokeTransaction", "auth": true, "prompts": true,
               "params": "{ account_address, calls, submit?, nonce?, resource_bounds?, proof_facts?, proof?, chainId? }",
               "call_shape": "calls = [{ contract_address, entry_point_selector, calldata: [felt…] }]. \
@@ -237,7 +237,7 @@ contractAddress/to for the address; entrypoint/entry_point/selector for the sele
 extended with Poseidon(proof_facts) so the signature covers them (required at sign time). On \
 submit:true also pass proof (standard-base64 STWO string; surrounding whitespace is stripped and \
 url-safe '-'/'_' is rejected) — required to broadcast. You MUST supply explicit \
-resource_bounds for proof-carrying invokes: strkd refuses to auto-estimate them (online estimation \
+resource_bounds for proof-carrying invokes: gravity refuses to auto-estimate them (online estimation \
 simulates the call without proof_facts in tx_info, so a contract reading them reverts) and \
 companion_estimateFee is also unsafe here. Estimate bounds manually (~2× current gas prices). \
 Sign-only echoes proof_facts/proof so you can assemble the broadcast yourself. Omit both for a \
@@ -285,5 +285,29 @@ normal invoke." },
             "Pairings and grants persist across wallet restarts; you should not need to re-pair.",
             "SNIP-36: wallet_addInvokeTransaction takes optional proof_facts (extends the signed hash) and proof (base64, for broadcast) — see that method. Proofs can be multi-MB; the loopback service accepts large request bodies."
         ]
-    })
+    });
+    let privacy = json!([
+{ "method": "companion_privacyStatus", "auth": true, "prompts": false,
+              "params": "{account, chain_id}", "returns": "Registration, public STRK balance, pool fee, adapter and deposit policy",
+              "note": "gravity privacy stack. First adapter: STRK20 v2-compatible pools. Explicit chain_id, account scope enforced. Requires unlocked wallet and configured private services. No viewing key is returned." },
+            { "method": "companion_privacyBalances", "auth": true, "prompts": "always",
+              "params": "{account, chain_id}", "returns": "Public, shielded and mature spendable STRK balances",
+              "note": "Uses configured discovery service. Viewing material stays in the wallet-managed worker and trusted services, never in this response." },
+            { "method": "companion_privacyPrepare", "auth": true, "prompts": "always",
+              "params": "{account, chain_id, operation: register|deposit|transfer|withdraw, amount?: decimal base units, recipient?}",
+              "returns": "review_id (5 minute lifetime), amount, recipient, pool fee, maximum network fee, pool and policy",
+              "note": "Builds and proves using the wallet's configured prover, without broadcasting. Screened pools require an attestation for deposits. No private key or private calldata is returned. Do not send compile_actions to a public RPC. Review is tied to this client and session." },
+            { "method": "companion_privacySubmit", "auth": true, "prompts": "always, including under grants",
+              "params": "{review_id}", "returns": "{transaction_hash, status: submitted|submission_unknown, chain_id}",
+              "note": "Consumes a reviewed operation once. Always asks the human to approve exact amount, recipient and fee cap. Never retries a broadcast. An uncertain response must be reconciled by hash, not resubmitted." },
+            { "method": "companion_privacyReceipt", "auth": true, "prompts": false,
+              "params": "{transaction_hash, chain_id}", "returns": "execution_status, finality_status, block_number, actual_fee",
+              "note": "Read-only receipt reconciliation. Require SUCCEEDED plus ACCEPTED_ON_L2 or ACCEPTED_ON_L1; refresh shielded balances after acceptance." },
+            { "method": "companion_privacyHistory", "auth": true, "prompts": false,
+              "params": "{account, chain_id}", "returns": "Saved submission hashes and receipt states for your account",
+              "note": "Use after reconnecting or restarting. A pending/unknown submission blocks further privacy preparation until its receipt is reconciled." }
+    ]);
+    doc["methods"].as_array_mut().expect("usage methods array")
+        .extend(privacy.as_array().expect("privacy methods array").iter().cloned());
+    doc
 }

@@ -2,6 +2,25 @@
 /.probe
 **/*.rs.bk
 Cargo.lock
+!Cargo.lock
+!desktop/src-tauri/Cargo.lock
+**/node_modules/
+/desktop/src-tauri/resources/privacy/worker.cjs
 
 # macOS
 .DS_Store
+
+# Local wallet state, credentials and operator artifacts never belong in Git.
+.env
+.env.*
+!.env.example
+*.env
+.wallets/
+*.pem
+*.key
+vault.bin
+clients.json
+cli-token.json
+port.lock
+requests.db*
+/privacy/.cache/

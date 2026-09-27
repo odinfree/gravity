@@ -18,6 +18,8 @@ Lives in [`spec/`](../spec/). Authoritative for design decisions.
 
 Lives in [`docs/code/`](./code/). Describes the implementation.
 
+- [`code/privacy-stack.md`](./code/privacy-stack.md) — gravity privacy architecture, pool adapters, compliance policies, keys, agent API and receipt recovery.
+- [`privacy/PROVENANCE.md`](../privacy/PROVENANCE.md) — vendored SDK pin, integrity, licensing and dependency caveats.
 - [`code/architecture.md`](./code/architecture.md) — workspace layout, crates,
   the security boundary, dependencies.
 - [`code/wallet-core.md`](./code/wallet-core.md) — reference for the

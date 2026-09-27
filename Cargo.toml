@@ -10,7 +10,7 @@ exclude = [".probe", "desktop"]
 version = "0.1.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/starknet-innovation/strkd"
+repository = "https://github.com/odinfree/gravity"
 
 # krusty-kms is experimental and not published to crates.io. Pin to an exact
 # commit; bumps must go through review (see spec/wallet-companion-spec.md §14).
@@ -56,15 +56,12 @@ libc = "0.2"
 # formula lands. It is NOT complete on its own — run `dist init` once to pin
 # `cargo-dist-version` (to whatever `dist` you have installed) and to GENERATE
 # `.github/workflows/release.yml`. Never hand-edit that workflow; re-run
-# `dist generate` after changing anything here. Only `strkd` (wallet-cli) is a
+# `dist generate` after changing anything here. Only `gravity` (wallet-cli) is a
 # binary, so it's the sole shipped artifact.
 # ---------------------------------------------------------------------------
 [workspace.metadata.dist]
 # Build installers for these. A tagged release (e.g. `v0.1.0`) triggers CI.
-installers = ["shell", "homebrew"]
-# Homebrew formula is published to this tap: `brew install starknet-innovation/tap/strkd`.
-tap = "starknet-innovation/homebrew-tap"
-publish-jobs = ["homebrew"]
+installers = ["shell"]
 # Prebuilt binaries: Apple silicon + Intel macOS, x86_64 + arm64 Linux.
 targets = [
     "aarch64-apple-darwin",
@@ -73,7 +70,7 @@ targets = [
     "aarch64-unknown-linux-gnu",
 ]
 ci = "github"
-# Don't auto-publish; cut releases deliberately while strkd is alpha.
+# Don't auto-publish; cut releases deliberately while gravity is alpha.
 install-updater = false
 
 # Optimized release builds for the shipped binary.

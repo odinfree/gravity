@@ -8,9 +8,10 @@ import { Connect } from "./components/Connect";
 import { Settings } from "./components/Settings";
 import { Agents } from "./components/Agents";
 import { Proving } from "./components/Proving";
+import { Privacy } from "./components/Privacy";
 import { ApprovalDialog } from "./components/ApprovalDialog";
 
-type Tab = "accounts" | "activity" | "agents" | "proving" | "connect" | "settings";
+type Tab = "accounts" | "privacy" | "activity" | "agents" | "proving" | "connect" | "settings";
 
 /// Cmd/Ctrl +, -, 0 zoom the whole UI (persisted). Answers "can I make it
 /// bigger with ⌘+?" — yes.
@@ -109,6 +110,9 @@ export default function App() {
           <button className={tab === "proving" ? "tab active" : "tab"} onClick={() => setTab("proving")}>
             Proving
           </button>
+          <button className={tab === "privacy" ? "tab active" : "tab"} onClick={() => setTab("privacy")}>
+            Privacy
+          </button>
           <button className={tab === "connect" ? "tab active" : "tab"} onClick={() => setTab("connect")}>
             Connect
           </button>
@@ -121,6 +125,7 @@ export default function App() {
           {tab === "activity" && <ActivityLog />}
           {tab === "agents" && <Agents />}
           {tab === "proving" && <Proving />}
+          {tab === "privacy" && <Privacy key={status.network} status={status} />}
           {tab === "connect" && <Connect status={status} />}
           {tab === "settings" && <Settings onChange={refresh} />}
         </main>
@@ -133,7 +138,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="topbar">
-        <span className="brand">strkd</span>
+        <span className="brand">gravity</span>
         <span className="spacer" />
         {status && (
           <span className="muted small">

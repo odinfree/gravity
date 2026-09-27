@@ -49,6 +49,7 @@ pub struct ServerState {
     /// prover holds no key material; its per-network settings (which carry a
     /// remote-prover API key) are IPC-only and never reachable through here.
     pub prover: Option<Arc<prover::ProverState>>,
+    pub privacy: Option<Arc<crate::privacy::PrivacyState>>,
     pub api_version: String,
     pub spec_versions: Vec<String>,
 }
@@ -79,6 +80,7 @@ impl ServerState {
             last_activity_ms: AtomicU64::new(now_unix_ms()),
             issue_repo: DEFAULT_ISSUE_REPO.to_string(),
             prover: None,
+            privacy: None,
             api_version: "0.1.0".to_string(),
             // The Starknet JSON-RPC spec the wallet's node client targets.
             // Verified against the Sepolia node (starknet_specVersion → 0.10.2,
@@ -125,6 +127,11 @@ impl ServerState {
     /// Attach the on-device proving companion so `companion_prove*` is available.
     pub fn with_prover(mut self, prover: Arc<prover::ProverState>) -> Self {
         self.prover = Some(prover);
+        self
+    }
+
+    pub fn with_privacy(mut self, privacy: Arc<crate::privacy::PrivacyState>) -> Self {
+        self.privacy = Some(privacy);
         self
     }
 
@@ -469,6 +476,36 @@ async fn handle(state: &ServerState, token: Option<&str>, req: Request) -> Handl
                 Err(e) => Err(e),
             }
         }
+        "companion_privacyStatus" | "companion_privacyBalances" | "companion_privacyPrepare" => {
+            let mut p = params.clone();
+            p["mode"] = json!(match method { "companion_privacyStatus" => "status", "companion_privacyBalances" => "balances", _ => "prepare" });
+            match serde_json::from_value::<crate::privacy::Request>(p) {
+                Ok(req) => crate::privacy::run(state, &client.id, scope_for(&client).as_deref(), req, true).await,
+                Err(_) => Err(WalletRpcError::InvalidRequest("Expected account, chain_id and privacy operation fields".into())),
+            }
+        }
+        "companion_privacySubmit" => match opt_param_str(&params, "review_id") {
+            Some(id) => crate::privacy::submit(state, &client.id, scope_for(&client).as_deref(), &id).await,
+            None => Err(WalletRpcError::InvalidRequest("Missing review_id".into())),
+        },
+        "companion_privacyHistory" => {
+            match (opt_param_str(&params,"account"),opt_param_str(&params,"chain_id")) {
+                (Some(account),Some(chain))=>match Felt::from_hex(&chain).ok().and_then(|f|ChainId::from_felt(&f).ok()) {
+                    Some(chain)=>crate::privacy::history(state,scope_for(&client).as_deref(),&account,chain).await.map(|h|json!(h)),
+                    None=>Err(WalletRpcError::ChainIdNotSupported),
+                },
+                _=>Err(WalletRpcError::InvalidRequest("Missing account or chain_id".into())),
+            }
+        }
+        "companion_privacyReceipt" => {
+            match (opt_param_str(&params, "transaction_hash"), opt_param_str(&params, "chain_id")) {
+                (Some(hash), Some(chain)) => match Felt::from_hex(&chain).ok().and_then(|f| ChainId::from_felt(&f).ok()) {
+                    Some(chain) => crate::privacy::receipt(state, &hash, chain).await,
+                    None => Err(WalletRpcError::ChainIdNotSupported),
+                },
+                _ => Err(WalletRpcError::InvalidRequest("Missing transaction_hash or chain_id".into())),
+            }
+        }
         "wallet_deploymentData" => handle_deployment_data(state, &client).await,
         "wallet_signTypedData" => handle_sign_typed_data(state, &client, &params).await,
         "wallet_addInvokeTransaction" => handle_add_invoke(state, &client, &params).await,
@@ -765,7 +802,7 @@ fn parse_resource_bounds(v: &Value) -> Result<ResourceBounds, WalletRpcError> {
     })
 }
 
-fn parse_calls(params: &Value) -> Result<Vec<Call>, WalletRpcError> {
+pub(crate) fn parse_calls(params: &Value) -> Result<Vec<Call>, WalletRpcError> {
     let arr = params
         .get("calls")
         .and_then(|v| v.as_array())
@@ -826,7 +863,7 @@ fn opt_nonce(params: &Value) -> Result<Option<Felt>, WalletRpcError> {
 }
 
 /// Optional caller-supplied resource bounds (`{ l1_gas, l2_gas, l1_data_gas }`).
-fn opt_fee_bounds(params: &Value) -> Result<Option<FeeBounds>, WalletRpcError> {
+pub(crate) fn opt_fee_bounds(params: &Value) -> Result<Option<FeeBounds>, WalletRpcError> {
     let rb = match params.get("resource_bounds") {
         Some(Value::Null) | None => return Ok(None),
         Some(v) => v,

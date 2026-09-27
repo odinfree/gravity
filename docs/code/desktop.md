@@ -1,5 +1,7 @@
 # `desktop` — Reference (Tauri app shell)
 
+gravity adds the **Privacy** tab for registration, shielded balances, shield/transfer/unshield preparation, fee review and receipt recovery. Pool configuration is IPC-only. Network preference is now persisted. The legacy app identifier is preserved to reuse existing vaults; see [privacy stack](privacy-stack.md).
+
 The macOS menu-bar app that hosts the wallet. It starts the loopback JSON-RPC
 service, surfaces the service's approval prompts as menu-bar confirmation
 dialogs, and gives the user a UI for onboarding, unlock, accounts, and the

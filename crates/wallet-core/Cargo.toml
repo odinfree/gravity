@@ -18,3 +18,5 @@ argon2 = { workspace = true }
 aes-gcm = { workspace = true }
 getrandom = { workspace = true }
 sha3 = { workspace = true }
+sha2 = { workspace = true }
+hkdf = "0.12"

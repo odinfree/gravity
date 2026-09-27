@@ -70,9 +70,9 @@ fn refresh_tray(app: &AppHandle, pending: usize) {
         if let Some(tray) = handle.tray_by_id(TRAY_ID) {
             let _ = tray.set_icon(tray_image(pending > 0));
             let tip = if pending > 0 {
-                format!("strkd — {pending} pending request(s)")
+                format!("gravity — {pending} pending request(s)")
             } else {
-                "strkd — Starknet wallet companion".to_string()
+                "gravity — Starknet wallet companion".to_string()
             };
             let _ = tray.set_tooltip(Some(&tip));
         } else {
@@ -120,6 +120,38 @@ struct DesktopState {
     prover: Arc<ProverState>,
 }
 
+#[tauri::command]
+async fn privacy_settings(state: State<'_, DesktopState>) -> Result<serde_json::Value, String> {
+    let p=state.server.privacy.as_ref().ok_or("Privacy unavailable")?;
+    Ok(serde_json::json!({"settings":p.settings().await,"runtime_ready":p.runtime_ready()}))
+}
+#[tauri::command]
+async fn set_privacy_settings(state: State<'_, DesktopState>, settings: wallet_rpc::privacy::Settings) -> Result<(),String> {
+    state.server.privacy.as_ref().ok_or("Privacy unavailable")?.set_settings(settings).await.map_err(|e|e.to_string())
+}
+#[tauri::command]
+async fn privacy_run(state: State<'_, DesktopState>, request: wallet_rpc::privacy::Request) -> Result<serde_json::Value,String> {
+    state.server.touch_activity();
+    wallet_rpc::privacy::run(&state.server,"desktop",None,request,false).await.map_err(|e|e.to_string())
+}
+#[tauri::command]
+async fn privacy_submit(state: State<'_, DesktopState>, review_id:String) -> Result<serde_json::Value,String> {
+    state.server.touch_activity();
+    wallet_rpc::privacy::submit(&state.server,"desktop",None,&review_id).await.map_err(|e|e.to_string())
+}
+#[tauri::command]
+async fn privacy_receipt(state: State<'_, DesktopState>, transaction_hash:String, chain_id:String) -> Result<serde_json::Value,String> {
+    let felt=wallet_core::Felt::from_hex(&chain_id).map_err(|_|"Invalid chain")?;
+    let chain=ChainId::from_felt(&felt).map_err(|_|"Invalid chain")?;
+    wallet_rpc::privacy::receipt(&state.server,&transaction_hash,chain).await.map_err(|e|e.to_string())
+}
+#[tauri::command]
+async fn privacy_history(state: State<'_, DesktopState>, account:String, chain_id:String) -> Result<Vec<serde_json::Value>,String> {
+    let felt=wallet_core::Felt::from_hex(&chain_id).map_err(|_|"Invalid chain")?;
+    let chain=ChainId::from_felt(&felt).map_err(|_|"Invalid chain")?;
+    wallet_rpc::privacy::history(&state.server,None,&account,chain).await.map_err(|e|e.to_string())
+}
+
 fn chain_name(c: ChainId) -> &'static str {
     match c {
         ChainId::Mainnet => "SN_MAIN",
@@ -139,9 +171,9 @@ fn show_main(app: &AppHandle) {
 /// ones a user most wants to catch).
 fn notif_title(method: &str) -> &'static str {
     match method {
-        "companion_requestPairing" => "strkd — pairing request",
-        "companion_requestFunding" => "strkd — funding (top-up) request",
-        _ => "strkd — approval needed",
+        "companion_requestPairing" => "gravity — pairing request",
+        "companion_requestFunding" => "gravity — funding (top-up) request",
+        _ => "gravity — approval needed",
     }
 }
 
@@ -240,6 +272,7 @@ async fn unlock(state: State<'_, DesktopState>, passphrase: String) -> Result<()
 #[tauri::command]
 async fn lock(state: State<'_, DesktopState>) -> Result<(), String> {
     state.server.session.lock().await.lock();
+    if let Some(p)=&state.server.privacy {p.clear().await;}
     Ok(())
 }
 
@@ -254,6 +287,9 @@ async fn set_network(state: State<'_, DesktopState>, network: String) -> Result<
         other => return Err(format!("unknown network '{other}'")),
     };
     state.server.session.lock().await.set_chain(chain);
+    let mut saved=settings::load(&state.config_path);
+    saved.last_network=match chain {ChainId::Mainnet=>"mainnet",ChainId::Sepolia=>"testnet"}.into();
+    settings::save(&state.config_path,&saved).map_err(|_|"Cannot save network preference")?;
     Ok(())
 }
 
@@ -278,7 +314,8 @@ async fn sync_prover_rpc(prover: &ProverState, wallet: &Settings) {
 /// Persist settings and rebuild the node client for the active network at
 /// runtime (no restart needed).
 #[tauri::command]
-async fn set_settings(state: State<'_, DesktopState>, settings: Settings) -> Result<(), String> {
+async fn set_settings(state: State<'_, DesktopState>, mut settings: Settings) -> Result<(), String> {
+    settings.last_network=settings::load(&state.config_path).last_network;
     settings.validate()?;
     settings::save(&state.config_path, &settings).map_err(|e| e.to_string())?;
     // Register a node for each network (so switchStarknetChain picks the right one).
@@ -749,7 +786,7 @@ pub fn run() {
             // not depend on the webview being awake). The approval bridge posts a
             // banner for every signing request; without permission macOS silently
             // drops them. First launch shows the system prompt; if the user misses
-            // it, they can enable "strkd" under System Settings → Notifications.
+            // it, they can enable "gravity" under System Settings → Notifications.
             {
                 use tauri_plugin_notification::PermissionState;
                 let n = app.notification();
@@ -770,7 +807,8 @@ pub fn run() {
             let config_path = data_dir.join("config.json");
 
             // Default network for v1.
-            let chain = ChainId::Sepolia;
+            let initial_settings=settings::load(&config_path);
+            let chain = if initial_settings.last_network=="mainnet" || (initial_settings.last_network.is_empty() && !initial_settings.mainnet_rpc.is_empty() && initial_settings.sepolia_rpc.is_empty()) {ChainId::Mainnet} else {ChainId::Sepolia};
             let vault_store = VaultStore::new(&vault_path);
 
             // Approval bridge plumbing.
@@ -814,7 +852,8 @@ pub fn run() {
             let session_arc = Arc::new(tokio::sync::Mutex::new(WalletSession::new_locked(chain)));
             let mut state = ServerState::with_log(session_arc, Arc::new(approver), log)
                 .with_vault_store(vault_store.clone())
-                .with_clients_path(data_dir.join("clients.json"));
+                .with_clients_path(data_dir.join("clients.json"))
+                .with_issue_repo("odinfree/gravity");
             // Nodes (broadcast + fee estimation) come from saved settings
             // (Settings tab → config.json), one per network. Changeable at runtime
             // via set_settings — no restart. Sign-only until an RPC URL is set.
@@ -830,6 +869,9 @@ pub fn run() {
             }
             // Expose proving over the loopback service (companion_prove*).
             state = state.with_prover(prover_state.clone());
+            let bundled_worker=app.path().resource_dir().ok().map(|p|p.join("resources/privacy/worker.cjs"));
+            let worker=bundled_worker.filter(|p|p.is_file()).unwrap_or_else(||PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources/privacy/worker.cjs"));
+            state=wallet_rpc::privacy::attach(state,data_dir.join("privacy"),worker);
             let server = Arc::new(state);
 
             // Start the loopback service (binds 127.0.0.1, writes port.lock).
@@ -881,11 +923,11 @@ pub fn run() {
             });
 
             // Menu-bar tray.
-            let open = MenuItemBuilder::with_id("open", "Open strkd").build(app)?;
+            let open = MenuItemBuilder::with_id("open", "Open gravity").build(app)?;
             let quit = MenuItemBuilder::with_id("quit", "Quit").build(app)?;
             let menu = MenuBuilder::new(app).items(&[&open, &quit]).build()?;
             let mut tray = TrayIconBuilder::with_id(TRAY_ID)
-                .tooltip("strkd — Starknet wallet companion")
+                .tooltip("gravity — Starknet wallet companion")
                 .menu(&menu);
             if let Some(icon) = tray_image(false) {
                 tray = tray.icon(icon);
@@ -903,6 +945,12 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            privacy_settings,
+            set_privacy_settings,
+            privacy_run,
+            privacy_submit,
+            privacy_receipt,
+            privacy_history,
             cancel_setup,
             status,
             generate,

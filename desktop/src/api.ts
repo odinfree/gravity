@@ -116,7 +116,35 @@ export interface ProofRecord {
   error?: string;
 }
 
+export interface PrivacyNetwork { pool_address: string; discovery_url: string; screening_policy: "required" | "pool_enforced" }
+export interface PrivacySettings { mainnet: PrivacyNetwork; testnet: PrivacyNetwork }
+export interface PrivacyRequest {
+  account: string; chain_id: string; mode: "status" | "balances" | "prepare";
+  operation?: "register" | "deposit" | "transfer" | "withdraw"; amount?: string; recipient?: string;
+}
+export interface PrivacyStatus {
+  registered: boolean; registration_mature: boolean; public_balance: string; pool_fee: string; proof_base: number;
+  shielded_balance?: string; spendable_balance?: string; notes?: number;
+}
+export interface PrivacyReview {
+  review_id: string; operation: string; amount: string; recipient: string;
+  account: string; chain_id: string; pool_fee: string; max_network_fee: string;
+  proof_base: number; screening_attached: boolean; screening_policy: string; adapter: string; warnings: string[];
+}
+export interface PrivacySubmission { transaction_hash: string; status: string; chain_id: string }
+export interface PrivacyReceipt {
+  transaction_hash: string; execution_status: string | null; finality_status: string | null;
+  block_number: number | null; actual_fee: { amount: string; unit: string } | null;
+}
+
 export const api = {
+  privacySettings: () => invoke<{ settings: PrivacySettings; runtime_ready: boolean }>("privacy_settings"),
+  setPrivacySettings: (settings: PrivacySettings) => invoke<void>("set_privacy_settings", { settings }),
+  privacyStatus: (request: PrivacyRequest) => invoke<PrivacyStatus>("privacy_run", { request }),
+  privacyPrepare: (request: PrivacyRequest) => invoke<PrivacyReview>("privacy_run", { request }),
+  privacySubmit: (reviewId: string) => invoke<PrivacySubmission>("privacy_submit", { reviewId }),
+  privacyReceipt: (transactionHash: string, chainId: string) => invoke<PrivacyReceipt>("privacy_receipt", { transactionHash, chainId }),
+  privacyHistory: (account: string, chainId: string) => invoke<PrivacySubmission[]>("privacy_history", { account, chainId }),
   status: () => invoke<Status>("status"),
   generate: (wordCount: number) => invoke<string>("generate", { wordCount }),
   import: (phrase: string) => invoke<void>("import", { phrase }),

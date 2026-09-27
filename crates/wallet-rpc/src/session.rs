@@ -18,6 +18,8 @@ use wallet_core::{
     Felt, InvokeV3Params, Registry, SignedDeclare, SignedDeployAccount, SignedInvoke, StarkSignature,
 };
 use zeroize::Zeroizing;
+use std::sync::atomic::{AtomicU64, Ordering};
+static SESSION_EPOCH: AtomicU64 = AtomicU64::new(1);
 
 use crate::error::WalletRpcError;
 
@@ -37,13 +39,30 @@ struct Unlocked {
 
 /// A wallet session, locked or unlocked, bound to a network.
 pub struct WalletSession {
+    epoch: u64,
     chain: ChainId,
     unlocked: Option<Unlocked>,
 }
 
 impl WalletSession {
+    pub fn epoch(&self) -> u64 { self.epoch }
+    /// Viewing material goes only to the wallet's private SDK child, never RPC/UI.
+    pub(crate) fn privacy_viewing_key(&self, account: &AccountRef, chain: ChainId, pool: &Felt) -> Result<Zeroizing<String>, WalletRpcError> {
+        let u = self.require_unlocked()?;
+        wallet_core::privacy::viewing_key_v1(&u.mnemonic, account.domain, account.index, chain, pool)
+            .map_err(WalletRpcError::from)
+    }
+
+    /// STRK20 signs a zero-fee virtual invoke whose sender is the pool itself.
+    /// The internal worker bridge validates the sole compile_actions call first.
+    pub(crate) fn sign_privacy_for(&self, account: &AccountRef, pool: &Felt, calls: &[Call], chain: ChainId, params: &InvokeV3Params) -> Result<SignedInvoke, WalletRpcError> {
+        let u = self.require_unlocked()?;
+        sign_invoke_v3(&u.mnemonic, account.domain, account.index, None, pool, calls, chain, params)
+            .map_err(WalletRpcError::from)
+    }
     pub fn new_locked(chain: ChainId) -> Self {
         WalletSession {
+            epoch: SESSION_EPOCH.fetch_add(1, Ordering::Relaxed),
             chain,
             unlocked: None,
         }
@@ -59,6 +78,7 @@ impl WalletSession {
         registry: Registry,
     ) -> Self {
         WalletSession {
+            epoch: SESSION_EPOCH.fetch_add(1, Ordering::Relaxed),
             chain,
             unlocked: Some(Unlocked {
                 mnemonic: Zeroizing::new(mnemonic.into()),
@@ -79,12 +99,14 @@ impl WalletSession {
             vault_passphrase: Zeroizing::new(vault_passphrase.to_string()),
             registry: contents.registry,
         });
+        self.epoch = SESSION_EPOCH.fetch_add(1, Ordering::Relaxed);
         Ok(())
     }
 
     /// Drop the unlocked state, wiping the mnemonic.
     pub fn lock(&mut self) {
         self.unlocked = None;
+        self.epoch = SESSION_EPOCH.fetch_add(1, Ordering::Relaxed);
     }
 
     pub fn is_locked(&self) -> bool {

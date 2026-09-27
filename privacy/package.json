@@ -1,0 +1,16 @@
+{
+  "name": "gravity-privacy-worker",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": { "node": ">=24" },
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@starkware-libs/starknet-privacy-sdk": "file:vendor/starkware-libs-starknet-privacy-sdk-0.14.3-rc.8.tgz",
+    "starknet": "10.5.0"
+  },
+  "devDependencies": { "esbuild": "0.28.2" }
+}

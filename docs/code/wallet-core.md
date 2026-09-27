@@ -1,5 +1,7 @@
 # `wallet-core` — Reference
 
+The versioned viewing-key derivation in `wallet_core::privacy` is documented in the [privacy stack guide](privacy-stack.md#keys-signing-and-private-inputs). It adds no signing-key export and needs independent review.
+
 The crate that owns all key material: BIP-39 mnemonics, derivation, Stark
 signing, OpenZeppelin address computation, the encrypted vault, and the account
 registry. All cryptography is delegated to `krusty-kms`; vault encryption uses

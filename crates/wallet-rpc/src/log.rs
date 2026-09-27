@@ -107,7 +107,7 @@ impl RequestLog {
     /// Persist one entry. Applies the full-payload redaction. Insert errors are
     /// swallowed so logging can never break request handling.
     pub fn record(&self, mut entry: LogEntry) {
-        let private_proving = matches!(entry.method.as_str(),
+        let private_proving = entry.method.starts_with("companion_privacy") || entry.method.starts_with("wallet_strk20") || matches!(entry.method.as_str(),
             "companion_prove" | "companion_signAndProve" | "companion_proveStatus" | "companion_proofActivity");
         if !self.full_payloads || private_proving {
             entry.params_json = None;

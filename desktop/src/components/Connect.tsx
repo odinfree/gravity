@@ -9,12 +9,12 @@ export function Connect({ status }: { status: Status | null }) {
 
   const url = status.service_url;
   const prompt =
-    `You have a local Starknet wallet companion "strkd" at ${url}.\n` +
+    `You have a local Starknet wallet companion "gravity" at ${url}.\n` +
     `GET ${url}/ for usage and follow it. It manages Starknet accounts and signs ` +
-    `transactions on your behalf; every sensitive action asks the human for on-screen ` +
+    `transactions on your behalf; sensitive actions follow the wallet’s approval policy. Privacy spending always asks for ` +
     `approval, and private keys never leave the wallet.\n` +
     `Pair once (companion_requestPairing), then you can create an account, request STRK ` +
-    `funding (companion_requestFunding), and request signatures.`;
+    `funding (companion_requestFunding), request signatures, and use companion_privacyStatus/Prepare/Submit for configured privacy pools.`;
 
   const copy = async () => {
     try {
@@ -46,7 +46,7 @@ export function Connect({ status }: { status: Status | null }) {
       </p>
 
       <div className="prompt-block">
-        <p className="muted small">Copy-paste this prompt for your agent to use strkd:</p>
+        <p className="muted small">Copy-paste this prompt for your agent to use gravity:</p>
         <pre className="prompt">{prompt}</pre>
         <button className="primary" onClick={() => void copy()}>
           {copied ? "Copied ✓" : "Copy prompt"}

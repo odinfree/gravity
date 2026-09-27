@@ -129,7 +129,7 @@ async fn usage_endpoint_is_open_and_self_describing() {
     assert_eq!(resp.status().as_u16(), 200);
     let doc: Value = resp.json().await.unwrap();
 
-    assert!(doc["service"].as_str().unwrap().contains("strkd"));
+    assert!(doc["service"].as_str().unwrap().contains("gravity"));
     assert!(doc["methods"].is_array());
     assert!(doc["quickstart"].is_array());
     // Core sections the agent contract must carry.
