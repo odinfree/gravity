@@ -1,8 +1,8 @@
 # `prover` crate
 
 On-device proving companion, ported from [`../dinner`](https://github.com/starknet-innovation/dinner).
-Hand it an opaque, **already-signed** payload + a network; it proves locally and
-returns the proof. It holds **no key material** — signing happens upstream in
+Hand it an opaque, **already-signed** payload + a network; it uses the configured
+local or remote backend and returns the proof. It holds **no signing keys** — signing happens upstream in
 `wallet-core`, and `prover` only ever sees a signed transaction.
 
 > For *why* the wallet and prover are split this way, see
@@ -35,12 +35,18 @@ desktop's IPC. Concretely:
 | `prover` | The `Prover` seam (`prove`/`kind`/`ready`) + `RemoteProver` (forwards to a configured remote prover; **no mock** — errors if no URL is set). |
 | `snip36` | Shared SNIP-36 helpers: nonce/block preflight, the CLI env (incl. the dummy `0x1` key), output parsing, and `run_and_parse`. |
 | `native_prover` | `NativeProver` — runs the local/bundled `snip36 prove virtual-os` CLI. The default, preferred backend. |
+| `starknet_rpc` | `StarknetRpcProver` — calls an existing Starknet transaction-prover JSON-RPC service; preserves the signed transaction and sanitizes errors. |
 | `state` | `ProverState { prover, jobs, settings, storage }` — cheap to clone (all `Arc`). |
 | `lib` | `build_prover_state`, `enqueue_prove`. |
 
 ## Backends (`STRKD_PROVER` / Settings `prover_backend`)
 
-Both backends produce **real** proofs — there is no mock. An unconfigured backend
+- `starknet-rpc` — use an existing self-hosted Starknet transaction prover
+  directly, including through a loopback SSH tunnel. See the
+  [configuration and API guide](./self-hosted-prover.md). No native prover is
+  started and no private request payload is persisted for this backend.
+
+All backends request **real** proofs — there is no mock. An unconfigured backend
 fails the prove with a clear, actionable error rather than returning a fake proof.
 
 - `native` (**default**) — runs the bundled `snip36` CLI on-device. Fails with
@@ -55,7 +61,7 @@ The persisted Settings toggle wins over the env/default, chosen once at startup
 
 | Var | Meaning | Default |
 |---|---|---|
-| `STRKD_PROVER` | backend: `native` \| `remote` | `native` |
+| `STRKD_PROVER` | backend: `native` \| `remote` \| `starknet-rpc` | `native` |
 | `STRKD_SNIP36_BIN` | path to the `snip36` binary | bundled `resources/prover/snip36`, else `~/Workshop/snip-36-prover-backend/target/release/snip36` |
 | `STRKD_SNIP36_WORK_DIR` | dir to run the CLI from (must contain `deps/`) | alongside the binary |
 | `STRKD_PROVE_TIMEOUT_SECS` | prove timeout before the process group is killed | `900` |
@@ -90,12 +96,13 @@ verifier **Tx B** (e.g. `verify_result(public_message)`) is broadcast carrying
 signs Tx A (a standard v3 invoke — **not** proof-carrying; `proof_facts` are an
 *output* of proving) and hands the signed tx straight to the in-process prover, so
 the caller skips the manual `wallet_addInvokeTransaction(sign-only)` →
-`companion_prove` round-trip and the secret never leaves the device.
+`companion_prove` round-trip. With a remote backend, the selected prover receives
+the private transaction inputs; only the native backend keeps proving on-device.
 
 `resource_bounds` is **required** — the virtual tx carries private calldata, so
 strkd refuses to fee-estimate it online (that would leak the inputs to the RPC
 node; matches the SNIP-36 "fee estimation on virtual tx" pitfall). It's
-approval-gated (a real signature, though proven locally and never broadcast).
+approval-gated (a real signature, though the virtual transaction is never broadcast).
 
 It deliberately does **not** build or broadcast Tx B: that invoke's calldata is
 decoded from the prover's L2→L1 message and is application-specific, so a generic
@@ -130,3 +137,6 @@ stub `Prover`** (in the test code, never shipped):
 - `wallet-rpc`'s `tests/dispatch.rs` attaches a stub `Prover` (returns a canned
   proof) to cover `companion_prove` / `companion_signAndProve` success end-to-end
   through the service, plus the unconfigured (`-32601`) and rejected (`113`) paths.
+- `crates/prover/tests/starknet_rpc.rs` exercises the actual HTTP adapter against
+  a synthetic JSON-RPC service, plus an opt-in read-only live health check. See
+  [the self-hosted guide](./self-hosted-prover.md#privacy-and-validation-boundaries).

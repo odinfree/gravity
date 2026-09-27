@@ -5,11 +5,20 @@ progresses — it must always reflect the present. History lives in
 [`progress-log.md`](./progress-log.md). Process lives in
 [`workflow.md`](./workflow.md).
 
-_Last updated: 2026-07-06_
+_Last updated: 2026-09-27 (self-hosted prover integration branch)_
 
 ---
 
 ## ▶ Resume here
+
+**Self-hosted prover adapter is built and tested.** Select `starknet-rpc` in
+Settings to use an existing Starknet transaction prover; see
+[setup and API details](../code/self-hosted-prover.md). The macOS app builds
+without a bundled native prover. The live loopback health check passed; no
+real proof, wallet import, or transaction was performed by this integration.
+Next: review private-input routing/log redaction, then run the wallet and
+proving flow with a throwaway Sepolia account and a Sepolia-configured prover.
+Full STRK20 wallet methods remain Phase 3; mainnet remains gated below.
 
 **Recommended: run-verify end-to-end now** — the wallet is usable. On a machine
 with a display, set `STRKD_RPC_URL` to a Sepolia RPC endpoint, `cd desktop &&
@@ -48,6 +57,10 @@ Phases are defined in [spec §13](../../spec/wallet-companion-spec.md#13-phasing
 
 ### ✅ Done
 
+- **Self-hosted Starknet prover transport** — `starknet-rpc` backend, Settings
+  option, SSH-loopback setup guide and optional desktop resource override.
+  Synthetic tests cover protocol/routing, errors and persistence; existing
+  service answered RPC `0.10.3-rc.2`. Health is not proof-generation evidence.
 - **Specification** — technical spec ([`spec/wallet-companion-spec.md`](../../spec/wallet-companion-spec.md))
   and derivation portability test plan
   ([`spec/portability-test-plan.md`](../../spec/portability-test-plan.md)).
@@ -61,7 +74,7 @@ Phases are defined in [spec §13](../../spec/wallet-companion-spec.md#13-phasing
   virtual tx and hands it to the in-process prover. SNIP-36 is inherently two
   transactions, so the on-chain verifier invoke is still broadcast separately via
   `wallet_addInvokeTransaction` (its calldata is app-specific). **No mock backend
-  or test-proof button** — both backends are real; an unconfigured one fails with
+  or test-proof button** — all backends are real; an unconfigured one fails with
   a clear error. Unit + dispatch tests green (incl. signAndProve; the success path
   uses a test-only stub `Prover`), clippy clean. **Live-verified end-to-end on
   Sepolia (2026-07-02):** the native backend (prover pin `v1.2.2` / deps-v7)
@@ -141,6 +154,9 @@ Phases are defined in [spec §13](../../spec/wallet-companion-spec.md#13-phasing
 
 ### ⛔ Blocked (needs human / security review)
 
+- **Self-hosted prover security review** — private-input routing, endpoint
+  trust and forced proving-log redaction need human review before sensitive
+  wallet use. Adapter tests are not a crypto audit or a STRK20 transfer test.
 - **Derivation portability (T1/T2) + agent isolation (T4)** — requires running
   [`spec/portability-test-plan.md`](../../spec/portability-test-plan.md) against
   real Argent/Braavos on isolated infra, security-team sign-off. Do **not** mark
@@ -168,13 +184,14 @@ Phases are defined in [spec §13](../../spec/wallet-companion-spec.md#13-phasing
 
 ## Test & build state
 
-| Check | Command | State (2026-06-11) |
+| Check | Command | State (2026-09-27) |
 |---|---|---|
 | Build | `cargo build` | ✅ |
-| Tests (core) | `cargo test` | ✅ 98 passed (21 core + 56 dispatch + 5 log + 2 persistence + 3 session + 2 clients + 5 transport-unit + 4 HTTP) |
-| Lint (core) | `cargo clippy --all-targets` | ✅ clean |
-| Desktop build | `cd desktop && npm run build` + `(cd src-tauri && cargo build)` | ✅ compiles; clippy clean. GUI **not run-verified** |
-| Installable bundle | `cd desktop && npm run tauri build` | ✅ produces `strkd.app` + `.dmg` (release) |
+| Tests (workspace) | `cargo test` | ✅ 140 passed; 1 opt-in live check ignored |
+| Lint (workspace) | `cargo clippy --all-targets -- -D warnings` | ✅ clean |
+| Desktop frontend | `cd desktop && npm run build` | ✅ type-checks and builds. GUI **not run-verified** |
+| Self-hosted app bundle | `cd desktop && npm run tauri build -- --config tauri.self-hosted.conf.json --bundles app --no-sign` | ✅ macOS arm64 `strkd.app`, no native prover resources; unsigned |
+| Existing prover health | `cargo test -p prover --test starknet_rpc live_loopback_prover_health -- --ignored --nocapture` | ✅ RPC `0.10.3-rc.2`; no proof requested |
 
 ## Open decisions not yet made
 

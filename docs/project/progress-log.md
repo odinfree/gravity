@@ -8,6 +8,61 @@ Use the [entry template](#entry-template) at the bottom for every new entry.
 
 ---
 
+## 2026-09-27 — Use an existing Starknet transaction prover
+
+**Did**
+- Added `starknet-rpc`, a backend for `starknet_proveTransaction`, selectable in
+  Settings. Existing `remote` uses a different `/v1/prove` API, so simply setting
+  its URL would not work. The new backend starts no native prover process.
+- Preserved signed INVOKE v3 transactions and complete proof results. Added
+  network/preflight checks, head-minus-ten default, bounded responses, a
+  15-minute timeout and sanitized errors without automatic retries.
+- Kept private calldata away from the blockchain RPC; omitted request payloads
+  from this backend's persisted records. Proving RPC logs now omit bodies and
+  raw errors even when debug payload capture is on.
+- Added synthetic HTTP tests, an opt-in live health check, a Settings option,
+  [setup guide](../code/self-hosted-prover.md) and optional Tauri config to omit
+  bundled native prover resources.
+
+**Decisions**
+- Use a separately operated prover through loopback/SSH or HTTPS. The operator
+  must verify its chain configuration: this API exposes no chain-ID method.
+- Do not rewrite virtual fee bounds after signing or send private transactions
+  to an ordinary node for estimation. Reject incompatible requests instead.
+- Keep this a transport integration. STRK20 pool actions, discovery and
+  viewing-key management remain Phase 3, and existing signing/approval policy
+  is unchanged.
+
+**Verify**
+- `cargo build -j 4`, `cargo test -j 4`,
+  `cargo clippy --all-targets -j 4 -- -D warnings`: clean; 140 tests passed and
+  one opt-in health check ignored in the normal suite.
+- `cd desktop && npm run build`: passed.
+- `cd desktop && npm run tauri build -- --config tauri.self-hosted.conf.json --bundles app --no-sign`:
+  produced an unsigned macOS arm64 app. Bundle inspection confirmed only the
+  app binary, icon and Info.plist, with no bundled prover resources.
+- `cargo test -p prover --test starknet_rpc live_loopback_prover_health -- --ignored --nocapture`:
+  existing local endpoint answered `0.10.3-rc.2`; no proof was requested.
+
+**Next / Resume**
+- Review the sensitive routing/logging changes, then run the wallet and proving
+  flow using a throwaway Sepolia account and a Sepolia-configured prover.
+
+**Notes / caveats**
+- **Security review required:** private-input routing, endpoint trust and log
+  redaction are security-sensitive. Mainnet and crypto audit gates remain open;
+  synthetic tests plus health do not establish a working private transfer.
+- No wallet seeds were imported, no funded transactions were submitted, and
+  no existing prover service configuration was changed. GUI not run-verified.
+- Historical logs and legacy/native proof records are not rewritten. Proofs,
+  metadata and caller labels remain persisted; labels must not contain secrets.
+- Existing frontend dependency audit reported six findings (two moderate,
+  four high); dependency remediation was not part of this adapter change.
+- The Tauri build emitted an upstream `STATIC_VCRUNTIME` deprecation warning;
+  the workspace strict Clippy check was clean.
+
+---
+
 ## 2026-06-11 — Deploy/funding correctness + Accounts UX (balances, wiggle, pending) + user-action logging
 
 Triggered by a maintainer deploy session: clicking Deploy too early failed with a

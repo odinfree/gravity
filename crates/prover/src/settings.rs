@@ -30,7 +30,7 @@ pub struct Settings {
     #[serde(default)]
     pub testnet: NetworkConfig,
     /// Prover backend: `""` (use the `STRKD_PROVER` env / default), `native`, or
-    /// `remote` (legacy: `companion`). Applied at startup, so changes take
+    /// `remote` (legacy: `companion`), or `starknet-rpc`. Applied at startup, so changes take
     /// effect on restart.
     #[serde(default)]
     pub prover_backend: String,

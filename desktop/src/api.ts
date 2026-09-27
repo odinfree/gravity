@@ -59,7 +59,7 @@ export interface ClientInfo {
 // ── On-device proving companion ─────────────────────────────────────────────
 
 export interface ProverStatus {
-  prover: string; // backend kind: "native" | "remote"
+  prover: string; // backend kind: "native" | "remote" | "starknet-rpc"
   ready: boolean;
   version: string;
   service_url: string;
@@ -84,7 +84,7 @@ export interface ProverNetworkConfig {
 export interface ProverSettings {
   mainnet: ProverNetworkConfig;
   testnet: ProverNetworkConfig;
-  /** "" (env/default), "native", or "remote". Applied on restart. */
+  /** "" (env/default), "native", "remote", or "starknet-rpc". Applied on restart. */
   prover_backend: string;
 }
 

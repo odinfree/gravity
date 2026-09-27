@@ -324,9 +324,8 @@ pub async fn dispatch(state: &ServerState, token: Option<&str>, req: Request) ->
     state.touch_activity();
     let id = req.id.clone();
     let method = req.method.clone();
-    // Params are public (no secrets pass through params; tokens ride the header
-    // and are never logged). Captured for the full-payload log; redaction is
-    // applied in RequestLog when the toggle is off.
+    // RequestLog always omits private proving params/results, regardless of
+    // the debug toggle. Tokens ride the header and are never captured here.
     let params_json = serde_json::to_string(&req.params).ok();
 
     let handled = handle(state, token, req).await;

@@ -2,8 +2,9 @@
 //!
 //! Hand it an opaque, **already-signed** payload + a network; it proves
 //! on-device (native SNIP-36 / stwo) or via a network's configured remote
-//! prover, and returns the proof. Every job's payload, proof, and metadata are
-//! persisted to local [`storage`]. The crate holds **no key material** — it
+//! prover, and returns the proof. Proofs and metadata are persisted to local
+//! [`storage`]; the `starknet-rpc` backend omits private request payloads.
+//! The crate holds **no signing keys** — it
 //! receives signed transactions and proves them; signing happens upstream in
 //! `wallet-core`.
 //!
@@ -18,6 +19,7 @@ pub mod native_prover;
 pub mod prover;
 pub mod settings;
 pub mod snip36;
+pub mod starknet_rpc;
 pub mod state;
 pub mod storage;
 
@@ -31,13 +33,14 @@ pub use config::ProverConfig;
 pub use jobs::{Activity, Job, JobStatus, Jobs};
 pub use prover::{Prover, ProveRequest, ProveResult, RemoteProver};
 pub use settings::{NetworkConfig, Settings, SettingsStore};
+pub use starknet_rpc::StarknetRpcProver;
 pub use state::ProverState;
 pub use storage::{ProofRecord, ProofSummary, Storage, StorageStats};
 
 /// Build shared prover state: load settings + open storage under `data_dir`, and
 /// wire the configured backend. `cfg` supplies the backend choice (the persisted
 /// Settings toggle wins over the env/default, chosen once at startup so a
-/// settings change applies on restart). Both backends are real — there is no
+/// settings change applies on restart). All backends are real — there is no
 /// mock; an unconfigured backend fails a prove with a clear error.
 pub fn build_prover_state(data_dir: PathBuf, cfg: &ProverConfig) -> ProverState {
     let settings = Arc::new(SettingsStore::load(data_dir.join("settings.json")));
@@ -50,6 +53,7 @@ pub fn build_prover_state(data_dir: PathBuf, cfg: &ProverConfig) -> ProverState 
         if s.is_empty() { cfg.prover_backend.clone() } else { s }
     };
     let prover: Arc<dyn Prover> = match backend.as_str() {
+        "starknet-rpc" => Arc::new(StarknetRpcProver::new(settings.clone())),
         // "remote" / "companion" → forward to the user's configured remote prover.
         "remote" | "companion" => Arc::new(RemoteProver::new(settings.clone())),
         // Default (incl. "native"): prove on-device.
@@ -63,7 +67,8 @@ fn unix_ms() -> u128 {
 }
 
 /// Enqueue a payload and prove it in the background. Times the proof, persists a
-/// full [`ProofRecord`] (payload + proof + metadata), and updates the job/feed.
+/// [`ProofRecord`] (proof + metadata, and payload only for legacy/native backends),
+/// and updates the job/feed.
 /// Shared by the JSON-RPC `companion_prove` handler and the desktop "test prove"
 /// command. Returns the new job id immediately; poll [`Jobs::get`] for the result.
 pub async fn enqueue_prove(
@@ -92,7 +97,8 @@ pub async fn enqueue_prove(
             created_at_ms,
             prove_ms,
             status: String::new(),
-            payload,
+            // STRK20 virtual calldata can include viewing material. Never persist it.
+            payload: if st.prover.kind() == "starknet-rpc" { Value::Null } else { payload },
             proof: None,
             error: None,
         };

@@ -9,7 +9,8 @@ pub struct ProverConfig {
     /// Which prover backend to use (`STRKD_PROVER`): `native` (default — proves
     /// on-device via the bundled SNIP-36 CLI) or `remote` (forward to a remote
     /// prover the user configured per-network). Legacy value `companion` →
-    /// `remote`. There is no mock backend.
+    /// `remote`. `starknet-rpc` calls a self-hosted transaction-prover JSON-RPC
+    /// endpoint directly. There is no mock backend.
     pub prover_backend: String,
 }
 

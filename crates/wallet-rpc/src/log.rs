@@ -7,13 +7,14 @@
 //! Key material is **never** logged: no seed, mnemonic, private key, passphrase,
 //! or raw bearer token. Tokens arrive in the `Authorization` header (never in
 //! params) and the dispatch layer logs only the resolved client *label/id*. The
-//! request params and results we do store contain only public data (calldata,
-//! signatures, addresses).
+//! Proving requests can carry private calldata or viewing material: their
+//! params/results are always omitted, even when full-payload capture is enabled.
 //!
 //! A `full_payloads` toggle (default on, for debugging — spec §9) controls
 //! whether the full `params_json` / `result_json` are persisted; when off, only
 //! a redacted summary (method, client, decision, outcome, codes, timing) is
-//! kept. Redaction is centralized here so there is one place to audit.
+//! kept. Proving errors retain only their code. Redaction is centralized here
+//! so there is one place to audit.
 //!
 //! Inserts are synchronous SQLite calls made under the caller's mutex. At
 //! wallet request rates (human/agent paced) this is negligible; if throughput
@@ -106,9 +107,14 @@ impl RequestLog {
     /// Persist one entry. Applies the full-payload redaction. Insert errors are
     /// swallowed so logging can never break request handling.
     pub fn record(&self, mut entry: LogEntry) {
-        if !self.full_payloads {
+        let private_proving = matches!(entry.method.as_str(),
+            "companion_prove" | "companion_signAndProve" | "companion_proveStatus" | "companion_proofActivity");
+        if !self.full_payloads || private_proving {
             entry.params_json = None;
             entry.result_json = None;
+        }
+        if private_proving {
+            entry.outcome = entry.error_code.map_or_else(|| "ok".into(), |code| format!("error {code}"));
         }
         let _ = self.conn.execute(
             "INSERT INTO requests

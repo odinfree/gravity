@@ -121,11 +121,11 @@ export function Settings({ onChange }: { onChange: () => void }) {
       </button>
       {err && <p className="error">{err}</p>}
 
-      <h3>On-device proving</h3>
+      <h3>Proving</h3>
       <p className="muted small">
-        Local proof generation for SNIP-36 invokes. The prover holds no keys — it proves an
-        already-signed transaction. These settings carry a remote-prover API key, so they stay on
-        this device and are never exposed over the wallet's service.
+        Choose where to prove signed virtual transactions. A self-hosted prover receives the
+        transaction's private inputs, so use a host you trust. Settings stay on this device
+        and are never exposed over the wallet's service.
       </p>
 
       <label className="field">
@@ -140,14 +140,18 @@ export function Settings({ onChange }: { onChange: () => void }) {
         >
           <option value="native">native — bundled on-device prover (recommended)</option>
           <option value="remote">remote — forward to a configured remote prover</option>
+          <option value="starknet-rpc">starknet-rpc — use your Starknet transaction prover</option>
         </select>
       </label>
 
-      {prover.prover_backend === "remote" && (
+      {(prover.prover_backend === "remote" || prover.prover_backend === "starknet-rpc") && (
         <>
           <p className="muted small">
-            Remote prover endpoints (used only by the <code>remote</code> backend). The RPC node is
-            shared with the wallet above.
+            Use a prover configured for the same network as the RPC node above.
+            {prover.prover_backend === "starknet-rpc" && (
+              <> For an SSH tunnel, use the loopback endpoint, such as http://127.0.0.1:3000.
+                This backend uses your running prover and does not launch the bundled one.</>
+            )}
           </p>
           {(["testnet", "mainnet"] as const).map((net) => (
             <div key={net} className="field">
@@ -156,18 +160,18 @@ export function Settings({ onChange }: { onChange: () => void }) {
               </span>
               <input
                 className="input"
-                placeholder="Remote prover URL"
+                placeholder={prover.prover_backend === "starknet-rpc" ? "http://127.0.0.1:3000" : "Remote prover URL"}
                 value={prover[net].prover_url}
                 onChange={(e) => proverField(net, "prover_url", e.target.value)}
               />
-              <input
+              {prover.prover_backend === "remote" && <input
                 className="input"
                 type="password"
                 placeholder="Remote prover API key"
                 autoComplete="off"
                 value={prover[net].prover_api_key}
                 onChange={(e) => proverField(net, "prover_api_key", e.target.value)}
-              />
+              />}
             </div>
           ))}
         </>

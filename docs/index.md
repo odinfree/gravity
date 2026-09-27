@@ -26,6 +26,9 @@ Lives in [`docs/code/`](./code/). Describes the implementation.
   crate (JSON-RPC service, auth, approval broker, handlers).
 - [`code/desktop.md`](./code/desktop.md) — reference for the `desktop` Tauri app
   (menu-bar shell, onboarding/unlock UI, approval bridge).
+- [`code/prover.md`](./code/prover.md) — proving backends and job lifecycle.
+- [`code/self-hosted-prover.md`](./code/self-hosted-prover.md) — connect an
+  existing Starknet transaction prover over JSON-RPC, including SSH tunnels.
 
 ## Project management (the "where are we" and "how we work")
 

@@ -17,3 +17,7 @@ reqwest = { workspace = true }
 # timeout/failure so it can't leak its port. Mirrors ../dinner's approach.
 [target.'cfg(unix)'.dependencies]
 libc = { workspace = true }
+
+[dev-dependencies]
+axum = { workspace = true }
+tokio = { workspace = true, features = ["full"] }

@@ -17,7 +17,14 @@ from [`dinner`](https://github.com/starknet-innovation/dinner)): hand it an
 already-signed payload via `companion_prove` and it generates a SNIP-36 proof
 locally — the secret never leaves the machine. `companion_signAndProve` goes one
 step further, signing the private virtual transaction and proving it in a single
-call. The prover holds no keys and sits strictly downstream of signing.
+call. The prover holds no signing keys and sits strictly downstream of signing.
+
+To use an existing Starknet transaction prover, select the **`starknet-rpc`**
+backend. It sends signed virtual transactions to your service, including over
+an SSH tunnel, and starts no bundled prover. See the
+[self-hosted prover guide](./docs/code/self-hosted-prover.md) for setup and a
+desktop build that excludes native prover resources. This adds the proving
+transport; the full `wallet_strk20*` wallet methods remain unfinished.
 
 > ⚠️ **Experimental. Not for real funds.** `krusty-kms` is flagged experimental
 > by its authors and the crypto path is unaudited. Use **throwaway test seeds
@@ -27,7 +34,7 @@ call. The prover holds no keys and sits strictly downstream of signing.
 ## Status
 
 All three layers are built. The crypto core (`wallet-core`) and the loopback
-service (`wallet-rpc`) are green — **92 tests, clippy clean** — covering
+service (`wallet-rpc`) are green — **140 workspace tests, strict clippy clean** — covering
 derivation, signing, the vault, the full `wallet_*` + `companion_*` handlers,
 auth, the approval broker, permission grants, and the request log. The Tauri
 menu-bar app (`desktop/`) compiles and its frontend builds, but the **GUI is not
@@ -37,7 +44,7 @@ the Settings tab; Sepolia reads/estimates are live-verified, while the broadcast
 hop still needs a funded-account submit.
 
 The `prover` crate is built and tested (the success path via a test-only stub
-`Prover`, since there is **no mock backend** — both real backends fail honestly
+`Prover`, since there is **no mock backend** — all real backends fail honestly
 when unconfigured), with `companion_prove*` covered end-to-end in the `wallet-rpc`
 dispatch tests. The native SNIP-36 backend is **live-verified on Sepolia
 (2026-07-02, prover pin `v1.2.2`)**: it generated a proof-carrying invoke

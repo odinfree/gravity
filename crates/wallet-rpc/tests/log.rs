@@ -41,6 +41,22 @@ fn full_payloads_on_keeps_params_and_result() {
 }
 
 #[test]
+fn private_proving_payloads_are_never_logged_even_with_debug_capture() {
+    let log = RequestLog::in_memory(true).unwrap();
+    for method in ["companion_prove", "companion_signAndProve", "companion_proveStatus", "companion_proofActivity"] {
+        let mut e = entry(method);
+        e.outcome = "error includes SYNTHETIC_PRIVATE_INPUT".into();
+        e.error_code = Some(-32000);
+        log.record(e);
+    }
+    for e in log.recent(4) {
+        assert!(e.params_json.is_none());
+        assert!(e.result_json.is_none());
+        assert_eq!(e.outcome, "error -32000");
+    }
+}
+
+#[test]
 fn full_payloads_off_redacts_params_and_result_but_keeps_summary() {
     let log = RequestLog::in_memory(false).unwrap();
     log.record(entry("wallet_signTypedData"));
