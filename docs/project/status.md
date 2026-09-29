@@ -10,10 +10,10 @@ configuration and recovery are in the [privacy guide](../code/privacy-stack.md).
 The first pool adapter is STRK20 v2-compatible and currently handles STRK.
 Different pool ABIs or compliance protocols require another reviewed adapter.
 The [Starkscan deposit adapter](../code/starkscan-screening.md) and native routing
-are implemented locally. Next: run the full socket-based tests, start the one
-shared adapter, confirm operator access, and verify one approved deposit end to
-end. This session cannot open listeners or reach external APIs, so the adapter
-is not running and these changes are not yet published or installed in the app.
+are implemented. The full synthetic tests now pass after restoring network and
+loopback access. Next: start the one shared adapter, confirm operator access,
+and verify one approved deposit end to end. The new app has not yet replaced
+the installed wallet, and adapter startup has not been verified.
 Do not claim out-of-the-box screening or a live accepted hosted deposit.
 
 ## Implemented
@@ -41,11 +41,13 @@ Do not claim out-of-the-box screening or a live accepted hosted deposit.
 - Five targeted Rust privacy tests passed. `cargo build` and strict workspace
   clippy passed. Seventeen desktop tests and the TypeScript/Vite build passed.
   The unsigned Apple Silicon app bundle builds; the installed app is unchanged.
-- Full Rust and SDK pipeline tests are blocked by sandbox `EPERM` when binding
-  loopback sockets; the same failure occurs before changes in the existing suite.
-  Do not label the full suite passed for this change.
-- Live API checks and GitHub publication are blocked by network restrictions.
-  No live hosted proof was requested and no funds were moved for this change.
+- Full Rust workspace: 149 tests passed. The separate SDK/Rust signing pipeline
+  also passed against synthetic loopback services. Two opt-in checks are excluded
+  from the default run; the synthetic pipeline was run explicitly afterward.
+- All 25 SDK/relay tests passed, including socket-based action-builder tests.
+  The earlier sandbox `EPERM` limitation is resolved for these checks.
+- No live hosted proof was requested and no funds were moved for this change.
+  These synthetic results do not establish live screening or deposit acceptance.
 
 ## Previous validation — 2026-09-27
 
@@ -69,8 +71,8 @@ Do not claim out-of-the-box screening or a live accepted hosted deposit.
 - Independent security review of the new viewing-key derivation and signing/
   pool-action path, plus inherited experimental `krusty-kms`, before production
   mainnet use. Structural tests do not establish audit completion or portability.
-- Live operator-authorized screened proving, service startup, full integration
-  checks and publication of the new adapter. A plain self-hosted prover does not
+- Live operator-authorized screened proving, service startup and mainnet
+  acceptance checks for the new adapter. A plain self-hosted prover does not
   provide deposit-screening authorization.
 - Live accepted receipts and discovered balances for shield → transfer → withdraw
   through this integration. Registration is live-verified; shield/transfer/withdraw remain unverified.

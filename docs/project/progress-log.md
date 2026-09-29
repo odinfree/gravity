@@ -8,6 +8,20 @@ Use the [entry template](#entry-template) at the bottom for every new entry.
 
 ---
 
+## 2026-09-29 — Complete the previously blocked integration checks
+
+- Network and loopback access became available. Re-ran the full Rust workspace:
+  149 tests passed, with the two default opt-in exclusions unchanged. Then ran
+  the SDK/Rust signing pipeline explicitly; it passed against synthetic services.
+- All 25 SDK/relay tests passed, including the socket-based SDK registration,
+  deposit, transfer, withdrawal and discovery tests previously blocked by EPERM.
+- Refreshed the remote repository: the pending adapter commit is based directly
+  on main, and no open pull requests require a merge. Prepared the implementation
+  and updated test record for a normal fast-forward publication.
+- No live Starkscan proof or funded transaction was attempted. Hosted screening,
+  accepted mainnet deposits, app installation and the independent security review
+  remain separate outstanding checks; synthetic tests do not establish them.
+
 ## 2026-09-29 — Shared Starkscan screened-deposit adapter
 
 - Added a loopback-only JSON-RPC adapter for the documented asynchronous hosted
