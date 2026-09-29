@@ -73,8 +73,10 @@ Packages credential. [Provenance and licenses](privacy/PROVENANCE.md).
 3. Open **Privacy → Privacy services**. Select a compatible pool, its deposit
    policy and your discovery endpoint. Services must use the same chain/pool.
 4. Fund and deploy the account. Privacy checks its pool registration automatically.
-5. Click **Register**, **Shield STRK**, **Private transfer** or **Unshield**.
-   gravity prepares the proof and opens one approval for the amount and fees.
+5. Review the selected account, recipient, amount, pool fee and editable maximum
+   network fee. Click **Register**, **Shield STRK**, **Private transfer** or
+   **Unshield** once. gravity proves and submits within those fee ceilings,
+   without a second dialog. Excess fees stop the operation before broadcast.
 6. Receipt checks and the registration/balance update run automatically.
    Success returns directly to the action form; there is no Done step.
    Dependent actions wait until accepted state is mature.
@@ -90,7 +92,8 @@ requires credentials issued by its screening operator. This repository does not
 include those credentials or an authorized public screening service.
 Alternatively, operators with Starkscan `prove` access can run the
 [shared deposit adapter](docs/code/starkscan-screening.md) and select it in
-Privacy services. A successful local health check is not proof of hosted access.
+the Privacy screen. The choice saves immediately; other actions retain the
+configured prover. A successful local health check is not proof of hosted access.
 
 [Complete privacy guide](docs/code/privacy-stack.md) ·
 [Self-hosted prover setup](docs/code/self-hosted-prover.md) ·
@@ -103,8 +106,10 @@ its API at `GET /`; pair once, then use `companion_privacyStatus`,
 `companion_privacyBalances`, `companion_privacyPrepare`, `companion_privacySubmit`,
 `companion_privacyReceipt` and `companion_privacyHistory`.
 
-Privacy spending always requires a concrete on-screen approval, including for
-agents with generic auto-approval grants. Preparation never broadcasts.
+Agent privacy spending requires a concrete on-screen approval, including for
+agents with generic auto-approval grants. Agent preparation never broadcasts.
+The native desktop action is a separate one-click authorization with explicit
+fee ceilings; it is not exposed as an agent RPC method.
 
 ```sh
 cargo install --path crates/wallet-cli

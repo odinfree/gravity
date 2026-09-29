@@ -12,25 +12,27 @@ beforeEach(async()=>{Object.assign(api,original);calls.length=0;host=document.cr
 afterEach(async()=>{await act(async()=>root.unmount());host.remove();});
 function button(s:string){const b=[...host.querySelectorAll('button')].find(b=>b.textContent===s);assert.ok(b,`button ${s}`);return b;}
 async function click(s:string){await act(async()=>button(s).click());}
-test('account status is automatic and one action opens the approval flow for exactly 10 STRK',async()=>{
+test('account status is automatic and one action submits exactly 10 STRK with the displayed fee ceilings',async()=>{
   assert.ok(calls.some(c=>c.method==='status'));
   await click('Shield STRK');
-  assert.equal(calls.find(c=>c.method==='prepare')!.value.amount,'10000000000000000000');
-  assert.equal(calls.find(c=>c.method==='prepare')!.value.chain_id,'0x534e5f4d41494e');
-  assert.equal(calls.filter(c=>c.method==='submit').length,1);
+  assert.equal(calls.find(c=>c.method==='execute')!.value.amount,'10000000000000000000');
+  assert.equal(calls.find(c=>c.method==='execute')!.value.chain_id,'0x534e5f4d41494e');
+  assert.equal(calls.filter(c=>c.method==='execute').length,1);
+  assert.deepEqual(calls.find(c=>c.method==='execute')!.value.limits,{max_pool_fee:'6000000000000000000',max_network_fee:'5000000000000000000'});
+  assert.ok(!calls.some(c=>c.method==='prepare'||c.method==='submit'),'no second review command');
   assert.match(host.textContent!,/Transaction accepted/);
   assert.ok(![...host.querySelectorAll('button')].some(b=>b.textContent==='Done'));
   assert.ok(!button('Shield STRK').disabled,'accepted transaction returns directly to actions');
 });
 test('screening failures leave the wallet with no submission path',async()=>{
-  api.privacyPrepare=async()=>{throw new Error('Screening signature required');};
+  api.privacyExecute=async()=>{throw new Error('Screening signature required');};
   api.privacyStatus=async(v)=>({...await original.privacyStatus(v),deposit_screening:'signature_missing'});
   await click('Shield STRK');assert.match(host.querySelector('[role="alert"]')!.textContent!,/Screening/);
   assert.ok(button('Shielding unavailable').disabled);
   assert.ok(!calls.some(c=>c.method==='submit'));await click('Dismiss');
   assert.equal(host.querySelector('[role="alert"]'),null);
   assert.ok(button('Shielding unavailable').disabled,'dismissing an error must not claim shielding works');
-  await act(async()=>{const select=host.querySelector('#privacy-operation') as HTMLSelectElement;select.value='transfer';select.dispatchEvent(new Event('change',{bubbles:true}));});
+  await act(async()=>{(host.querySelector('input[name="privacy-operation"][value="transfer"]') as HTMLInputElement).click();});
   assert.ok(!button('Private transfer').disabled,'screening applies only to deposits');
 });
 test('a confirmed receipt remains final when discovery fails',async()=>{
@@ -46,14 +48,14 @@ test('unverified screening is never labelled ready',()=>{
   assert.match(host.textContent!,/Screening not verified/);
   assert.match(host.textContent!,/operator-issued access/);
 });
-test('rejecting the wallet approval never claims a transaction was accepted',async()=>{
-  api.privacySubmit=async()=>{throw new Error('User refused');};
-  await click('Shield STRK');assert.match(host.textContent!,/User refused/);
+test('a failed one-click transaction never claims acceptance',async()=>{
+  api.privacyExecute=async()=>{throw new Error('Prepared fees exceed the displayed limits');};
+  await click('Shield STRK');assert.match(host.textContent!,/fees exceed/);
   assert.ok(!host.textContent?.includes('Transaction accepted'));assert.ok(!host.textContent?.includes('0xabc'));
 });
 test('switching account clears a transaction result and checks the new account',async()=>{
   await click('Shield STRK');
-  await act(async()=>{const select=host.querySelector('#privacy-account') as HTMLSelectElement;select.value='0x456';select.dispatchEvent(new Event('change',{bubbles:true}));});
+  await act(async()=>{(host.querySelector('input[name="privacy-account"][value="0x456"]') as HTMLInputElement).click();});
   assert.ok(!host.textContent?.includes('Transaction accepted'));
   assert.ok(calls.some(c=>c.method==='status'&&c.value.account==='0x456'));
 });
@@ -71,28 +73,27 @@ test('hosted quota stops shielding while transfers remain available',async()=>{
   root=createRoot(host);await act(async()=>{root.render(<Privacy status={{network:'SN_MAIN'} as any}/>);});
   assert.match(host.textContent!,/Hosted attempts today: 10 \/ 10 across local clients/);
   assert.ok(button('Shielding unavailable').disabled);
-  await act(async()=>{const select=host.querySelector('#privacy-operation') as HTMLSelectElement;select.value='transfer';select.dispatchEvent(new Event('change',{bubbles:true}));});
+  await act(async()=>{(host.querySelector('input[name="privacy-operation"][value="transfer"]') as HTMLInputElement).click();});
   assert.ok(!button('Private transfer').disabled);
 });
-test('hosted selection is explicit and has no credential field',async()=>{
-  await click('Privacy services');
-  const select=host.querySelector('#privacy-deposit-prover') as HTMLSelectElement;
-  assert.equal(select.value,'configured');
-  await act(async()=>{select.value='starkscan';select.dispatchEvent(new Event('change',{bubbles:true}));});
+test('one click saves the hosted choice without preparing or submitting a transaction',async()=>{
+  const choice=host.querySelector('input[name="privacy-deposit-prover"][value="starkscan"]') as HTMLInputElement;
+  assert.equal(choice.checked,false);
+  assert.ok((host.querySelector('input[name="privacy-deposit-prover"][value="configured"]') as HTMLInputElement).checked);
+  await act(async()=>{choice.click();});
+  assert.equal(choice.checked,true);
   assert.match(host.textContent!,/Starkscan receives the deposit’s private proving inputs/);
   assert.equal(host.querySelector('input[type="password"]'),null);
-  await click('Save privacy services');
+  assert.equal(calls.filter(c=>c.method==='settings').length,1);
   assert.equal(calls.find(c=>c.method==='settings')!.value.mainnet.deposit_prover,'starkscan');
-  assert.ok(!calls.some(c=>c.method==='prepare'));
+  assert.ok(!calls.some(c=>c.method==='submit'));
+  assert.match(host.textContent!,/both services available/);
+  assert.ok(!calls.some(c=>c.method==='execute'));
 });
-test('Back restores the saved prover choice rather than applying an unsaved route',async()=>{
-  await click('Privacy services');
-  const select=host.querySelector('#privacy-deposit-prover') as HTMLSelectElement;
-  await act(async()=>{select.value='starkscan';select.dispatchEvent(new Event('change',{bubbles:true}));});
-  await click('Back');
-  assert.ok(!host.textContent?.includes('Starkscan adapter is not running'));
-  assert.ok(!button('Shield STRK').disabled);
-  assert.ok(!calls.some(c=>c.method==='settings'));
-  await click('Privacy services');
-  assert.equal((host.querySelector('#privacy-deposit-prover') as HTMLSelectElement).value,'configured');
+test('a failed prover save retains the previous selection and never submits',async()=>{
+  api.setPrivacySettings=async()=>{throw new Error('Could not save services');};
+  await act(async()=>{(host.querySelector('input[name="privacy-deposit-prover"][value="starkscan"]') as HTMLInputElement).click();});
+  assert.equal((host.querySelector('input[name="privacy-deposit-prover"][value="configured"]') as HTMLInputElement).checked,true);
+  assert.match(host.querySelector('[role="alert"]')!.textContent!,/Could not save/);
+  assert.ok(!calls.some(c=>c.method==='submit'||c.method==='execute'));
 });

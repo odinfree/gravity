@@ -69,6 +69,17 @@ body {
 .privacy-card { padding: 16px; border: 1px solid var(--border, #29313c); border-radius: 12px; display: flex; flex-direction: column; gap: 10px; }
 .privacy-card h3, .privacy-card p { margin: 0; }
 .privacy-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.privacy-choices { margin: 0; padding: 0; border: 0; display: grid; gap: 8px; min-width: 0; }
+.privacy-choices legend { margin-bottom: 8px; color: var(--muted); font-size: 13px; }
+.privacy-panel .privacy-choice { display: flex; align-items: center; gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; color: var(--text); cursor: pointer; }
+.privacy-choice:has(input:checked) { border-color: var(--accent); background: #7187ff16; }
+.privacy-choice:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.privacy-choice input { margin: 0; flex: 0 0 auto; accent-color: var(--accent); }
+.privacy-choice span { min-width: 0; overflow-wrap: anywhere; }
+.privacy-choice strong, .privacy-choice small { display: block; }
+.privacy-choice small { margin-top: 4px; color: var(--muted); }
+.privacy-choices:disabled .privacy-choice { cursor: default; opacity: .6; }
+
 .privacy-balances { display: grid; grid-template-columns: 1fr auto; gap: 10px; margin: 0 0 10px; }
 .privacy-balances dt { color: var(--muted); }
 .privacy-balances dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }

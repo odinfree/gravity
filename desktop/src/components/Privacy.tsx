@@ -1,9 +1,22 @@
 import { useEffect, useRef, useState } from "react";
-import { api, type Account, type Status, type PrivacySettings, type PrivacyStatus, type PrivacyReview, type PrivacySubmission, type PrivacyReceipt } from "../api";
+import { api, type Account, type Status, type PrivacySettings, type PrivacyStatus, type PrivacySubmission, type PrivacyReceipt } from "../api";
 import { parseStrk, formatStrk } from "../privacy-amount";
 
 type Operation = "register" | "deposit" | "transfer" | "withdraw";
 const labels: Record<Operation,string> = {register:"Register",deposit:"Shield",transfer:"Private transfer",withdraw:"Unshield"};
+function PrivacyChoices({name,label,value,options,disabled=false,onChange}:{
+  name:string;label:string;value:string;options:{value:string;label:string;detail?:string}[];
+  disabled?:boolean;onChange:(value:string)=>void;
+}) {
+  return <fieldset className="privacy-choices" disabled={disabled}>
+    <legend>{label}</legend>
+    {options.map(option=><label key={option.value} className="privacy-choice">
+      <input type="radio" name={name} value={option.value} checked={value===option.value} onChange={()=>onChange(option.value)}/>
+      <span><strong>{option.label}</strong>{option.detail&&<small>{option.detail}</small>}</span>
+    </label>)}
+  </fieldset>;
+}
+
 export function Privacy({status}: {status: Status}) {
   const [accounts,setAccounts]=useState<Account[]>([]);
   const [selected,setSelected]=useState("");
@@ -17,7 +30,7 @@ export function Privacy({status}: {status: Status}) {
   const [busy,setBusy]=useState("");
   const [error,setError]=useState("");
   const [balanceError,setBalanceError]=useState("");
-  const [review,setReview]=useState<PrivacyReview|null>(null);
+  const [networkFeeLimit,setNetworkFeeLimit]=useState("5");
   const [submitted,setSubmitted]=useState<PrivacySubmission|null>(null);
   const [receipt,setReceipt]=useState<PrivacyReceipt|null>(null);
   const [history,setHistory]=useState<PrivacySubmission[]>([]);
@@ -32,7 +45,7 @@ export function Privacy({status}: {status: Status}) {
     return()=>{active=false;generation.current++;};
   },[]);
   useEffect(()=>{
-    generation.current++;setData(null);setReview(null);setSubmitted(null);setReceipt(null);setError("");setBalanceError("");setBusy("");
+    generation.current++;setData(null);setSubmitted(null);setReceipt(null);setError("");setBalanceError("");setBusy("");
     let active=true;setHistory([]);
     if(selected)api.privacyHistory(selected,chainId).then(h=>{if(active)setHistory(h);}).catch(e=>{if(active)setError(String(e));});
     return()=>{active=false;};
@@ -52,27 +65,23 @@ export function Privacy({status}: {status: Status}) {
       if(epoch===generation.current)setBalanceError("Shielded balance unavailable. Your last confirmed transaction is unchanged.");
     }
   });}
-  function prepare(op:Operation){return task("Preparing your proof and fees…",async epoch=>{
+  function prepare(op:Operation){return task("Proving and submitting within your fee limits…",async epoch=>{
+    if(!data)throw new Error("Wait for the account and pool fee check.");
     const amount=op==="register"?"0":parseStrk(quantity);
     const target=op==="withdraw"?(recipient.trim()||selected):recipient.trim();
     if(op==="transfer" && !/^0x[0-9a-fA-F]+$/.test(target))throw new Error("Enter the recipient’s Starknet address.");
-    let value:PrivacyReview;
-    try { value=await api.privacyPrepare({...context,mode:"prepare",operation:op,amount,recipient:target||selected}); }
-    catch(e) {
-      // Fetch the backend's observed screening state; never infer readiness from health.
+    setSubmitted(null);setReceipt(null);
+    try {
+      const sent=await api.privacyExecute({...context,mode:"prepare",operation:op,amount,recipient:target||selected},
+        {max_pool_fee:data.pool_fee,max_network_fee:parseStrk(networkFeeLimit)});
+      if(epoch===generation.current){setSubmitted(sent);setHistory(h=>[sent,...h]);}
+    } catch(e) {
       if(op==="deposit")try {
         const current=await api.privacyStatus({...context,mode:"status"});
         if(epoch===generation.current)setData(current);
-      } catch { /* Keep the original actionable error. */ }
+      } catch { /* Preserve the original operation error. */ }
       throw e;
     }
-    if(epoch!==generation.current)return;
-    setReview(value);setSubmitted(null);setReceipt(null);setBusy("Approve the amount and fees in the wallet…");
-    // One action starts the flow. Rust still requires the final human approval.
-    try {
-      const sent=await api.privacySubmit(value.review_id);
-      if(epoch===generation.current){setSubmitted(sent);setHistory(h=>[sent,...h]);}
-    } finally {if(epoch===generation.current)setReview(null);}
   });}
   function checkReceipt(){if(!submitted)return;return task("Checking the transaction receipt…",async epoch=>{
     const value=await api.privacyReceipt(submitted.transaction_hash,submitted.chain_id);
@@ -80,7 +89,16 @@ export function Privacy({status}: {status: Status}) {
   });}
   function save(){if(!settings)return;return task("Saving privacy services…",async epoch=>{
     await api.setPrivacySettings(settings);
-    if(epoch===generation.current){setEditing(false);setData(null);setReview(null);}
+    if(epoch===generation.current){setEditing(false);setData(null);}
+  });}
+  function chooseDepositProver(value:string){return task("Saving shielding prover…",async epoch=>{
+    const current=await api.privacySettings();
+    const updated={...current.settings,mainnet:{...current.settings.mainnet,deposit_prover:value as "configured"|"starkscan"}};
+    await api.setPrivacySettings(updated);
+    if(epoch!==generation.current)return;
+    setSettings(updated);setData(null);
+    const currentStatus=await api.privacyStatus({...context,mode:"status"});
+    if(epoch===generation.current)setData(currentStatus);
   });}
   function cancelSettings(){return task("Restoring privacy services…",async epoch=>{
     const current=await api.privacySettings();
@@ -139,22 +157,35 @@ export function Privacy({status}: {status: Status}) {
   return <section className="panel privacy-panel">
     <div className="privacy-title"><h2>Privacy</h2><span className="badge">{network==="mainnet"?"Mainnet":"Sepolia"}</span></div>
     <p className="muted small">Starknet privacy with your chosen services. The current adapter supports STRK20-compatible pools and STRK.</p>
-    <label htmlFor="privacy-account">Account</label>
-    <select id="privacy-account" className="input" value={selected} disabled={Boolean(busy)} onChange={e=>setSelected(e.target.value)}>
-      {accounts.map(a=><option key={a.address} value={a.address}>{a.label||"Account"} · {a.address.slice(0,10)}…</option>)}
-    </select>
+    <PrivacyChoices name="privacy-account" label="Account" value={selected} disabled={Boolean(busy)} onChange={setSelected}
+      options={accounts.map(a=>({value:a.address,label:a.label||"Account",detail:`${a.address.slice(0,10)}…${a.address.slice(-6)}`}))}/>
     {!accounts.length&&<p className="muted">Create an account in Accounts to get started.</p>}
     {!runtime&&<p className="error">Privacy runtime unavailable. Install Node.js 24+ and build the bundled privacy worker.</p>}
     <div className="privacy-actions"><button className="ghost" disabled={disabled} onClick={()=>refresh(true)}>Refresh balance</button>
-      <button className="ghost" disabled={Boolean(busy)} onClick={()=>{setReview(null);if(editing)void cancelSettings();else setEditing(true);}}>Privacy services</button></div>
+      <button className="ghost" disabled={Boolean(busy)} onClick={()=>{if(editing)void cancelSettings();else setEditing(true);}}>Privacy services</button></div>
     {editing&&settings&&<div className="privacy-card">
       <h3>Services for {network==="mainnet"?"Mainnet":"Sepolia"}</h3>
       <p className="muted small">Use a discovery service you trust: it receives viewing material. The prover and blockchain node use the endpoints in Settings.</p>
       <label htmlFor="privacy-pool">Pool address</label><input id="privacy-pool" className="input" value={settings[network].pool_address} onChange={e=>setSettings({...settings,[network]:{...settings[network],pool_address:e.target.value}})}/>
       <label htmlFor="privacy-policy">Deposit policy</label><select id="privacy-policy" className="input" value={settings[network].screening_policy} onChange={e=>setSettings({...settings,[network]:{...settings[network],screening_policy:e.target.value as "required"|"pool_enforced"}})}><option value="required">Screening attestation required</option><option value="pool_enforced">Custom pool — policy enforced by its contract</option></select><p className="muted small">Changing this setting cannot override a pool’s on-chain rules. Official STRK20 pools require screening.</p>
       <label htmlFor="privacy-discovery">Discovery endpoint</label><input id="privacy-discovery" className="input" placeholder="http://127.0.0.1:8080" value={settings[network].discovery_url} onChange={e=>setSettings({...settings,[network]:{...settings[network],discovery_url:e.target.value}})}/>
-      {network==="mainnet"&&<><label htmlFor="privacy-deposit-prover">Shielding prover</label><select id="privacy-deposit-prover" className="input" value={settings[network].deposit_prover??"configured"} onChange={e=>setSettings({...settings,[network]:{...settings[network],deposit_prover:e.target.value as "configured"|"starkscan"}})}><option value="configured">Use the prover in Settings</option><option value="starkscan">Starkscan — screened mainnet deposits</option></select><p className="muted small">Starkscan receives the deposit’s private proving inputs. The shared local adapter keeps its key outside the wallet and limits hosted attempts to 10 per UTC day. Registration, transfers and withdrawals keep using your configured prover.</p></>}
+
       <div className="privacy-actions"><button className="ghost" disabled={Boolean(busy)} onClick={()=>cancelSettings()}>Back</button><button className="primary" disabled={Boolean(busy)} onClick={save}>Save privacy services</button></div>
+    </div>}
+      {network==="mainnet"&&settings&&!editing&&<div className="privacy-card">
+        <PrivacyChoices name="privacy-deposit-prover" label="Shielding prover" value={settings[network].deposit_prover??"configured"}
+          disabled={disabled} onChange={value=>void chooseDepositProver(value)}
+          options={[{value:"configured",label:"Configured prover",detail:"Use the prover in Settings. Screened pools still require an authorized screening service."},
+            {value:"starkscan",label:"Starkscan",detail:"Hosted prover and screening for mainnet deposits."}]}/>
+        <p className="muted small">Registration, private transfers and withdrawals always use your configured prover. Choosing Starkscan for shielding keeps both services available.</p>
+        <p className="muted small">Starkscan receives the deposit’s private proving inputs. The shared local adapter keeps its key outside the wallet and limits hosted attempts to 10 per UTC day.</p>
+        <p className="muted small">Your choice saves immediately.</p>
+      </div>}
+
+    {data&&<div className="privacy-card">
+      <label htmlFor="privacy-network-fee">Maximum network fee in STRK</label>
+      <input id="privacy-network-fee" className="input" inputMode="decimal" value={networkFeeLimit} disabled={Boolean(busy)} onChange={e=>setNetworkFeeLimit(e.target.value)}/>
+      <p className="small">Pool fee: {formatStrk(data.pool_fee)} STRK, plus a network fee up to your limit. Clicking an action authorizes this amount and these fees on {network==="mainnet"?"Mainnet":"Sepolia"}, without another confirmation. It stops if the fees exceed your limits.</p>
     </div>}
     {data&&<div className="privacy-card">
       <dl className="privacy-balances"><dt>Public STRK</dt><dd title={data.public_balance}>{formatStrk(data.public_balance)}</dd>
@@ -163,30 +194,19 @@ export function Privacy({status}: {status: Status}) {
         <dt>Pool fee per operation</dt><dd>{formatStrk(data.pool_fee)} STRK</dd>
         <dt>Registration</dt><dd>{data.registered?(data.registration_mature?"Registered":"Registered · settling…"):"Not registered with this pool"}</dd>
         <dt>Shielding</dt><dd>{screeningMissing?"Unavailable · screening missing":screeningRequired?"Screening not verified":"Pool policy applies"}</dd></dl>
-      {!data.registered&&<><p className="muted small">Register once to use this pool. Click Register, approve the fees once, and gravity handles the rest.</p><button className="primary" disabled={disabled} onClick={()=>prepare("register")}>Register</button></>}
+      {!data.registered&&<><p className="muted small">Register once to use this pool. Register submits automatically within the fee limits shown above.</p><button className="primary" disabled={disabled} onClick={()=>prepare("register")}>Register</button></>}
       {hosted&&<p className="muted small" role="status">{!relay?.reachable?"Starkscan adapter is not running.":`Hosted attempts today: ${relay.local_attempts} / ${relay.local_limit} across local clients. Resets at 00:00 UTC. This counter does not include requests sent outside the adapter.`}{relay?.pending?.length?" A hosted proof is unresolved; wait or check the shared relay status.":""}{relay?.retry_after_seconds?` Retry after ${relay.retry_after_seconds} seconds.`:""}</p>}
     </div>}
-    {data?.registered&&!review&&(!submitted||accepted||receipt?.execution_status==="REVERTED")&&<div className="privacy-card">
-      <label htmlFor="privacy-operation">Action</label>
-      <select id="privacy-operation" className="input" value={operation} disabled={Boolean(busy)} onChange={e=>setOperation(e.target.value as Operation)}>
-        <option value="deposit">Shield STRK</option><option value="transfer">Private transfer</option><option value="withdraw">Unshield STRK</option>
-      </select>
+    {data?.registered&&(!submitted||accepted||receipt?.execution_status==="REVERTED")&&<div className="privacy-card">
+      <PrivacyChoices name="privacy-operation" label="Action" value={operation} disabled={Boolean(busy)} onChange={value=>setOperation(value as Operation)}
+        options={[{value:"deposit",label:"Shield STRK"},{value:"transfer",label:"Private transfer"},{value:"withdraw",label:"Unshield STRK"}]}/>
       <label htmlFor="privacy-amount">Amount in STRK</label><input id="privacy-amount" className="input" inputMode="decimal" value={quantity} disabled={Boolean(busy)} onChange={e=>setQuantity(e.target.value)}/>
       {operation!=="deposit"&&<><label htmlFor="privacy-recipient">{operation==="transfer"?"Registered recipient":"Public recipient (blank = this account)"}</label><input id="privacy-recipient" className="input" placeholder="0x…" value={recipient} disabled={Boolean(busy)} onChange={e=>setRecipient(e.target.value)}/></>}
-      {operation==="deposit"&&<p className="muted small">{screeningMissing?"Direct shielding is unavailable for this pool. The selected prover returned no authorized screening signature; no deposit was submitted.":hosted?"Shielding uses Starkscan’s hosted prover and screening service. Each new proof attempt uses the shared allowance, even if you later cancel. Approve promptly: screening expires within five minutes.":screeningRequired?"This pool requires an authorized screening signature for every deposit. Use an authorized prover or select Starkscan in Privacy services with operator-issued access.":"Shielding makes a public deposit. This pool enforces its configured deposit policy."}</p>}
+      {operation==="deposit"&&<p className="muted small">{screeningMissing?"Direct shielding is unavailable for this pool. The selected prover returned no authorized screening signature; no deposit was submitted.":hosted?"Shielding uses Starkscan’s hosted prover and screening service. Each new proof attempt uses the shared allowance. Your click authorizes proving and submission within the displayed fee limits.":screeningRequired?"This pool requires an authorized screening signature for every deposit. Use an authorized prover or select Starkscan in Privacy services with operator-issued access.":"Shielding makes a public deposit. This pool enforces its configured deposit policy."}</p>}
       {operation==="transfer"&&<p className="muted small">The recipient must be registered. Pool notes stay private, but submitting from this account reveals who paid the network fee.</p>}
       {operation==="withdraw"&&<p className="muted small">Unshielding reveals the amount and recipient. New notes need time to mature before spending.</p>}
       <button className="primary" disabled={disabled||!data.registration_mature||(operation==="deposit"&&(screeningMissing||hostedBlocked))} onClick={()=>prepare(operation)}>{operation==="deposit"?(screeningMissing||hostedBlocked?"Shielding unavailable":"Shield STRK"):labels[operation]}</button>
       {!data.registration_mature&&<p className="muted small">Registration is accepted. Waiting for the pool state to settle before your next action…</p>}
-    </div>}
-    {review&&<div className="privacy-card" aria-label="Privacy transaction review">
-      <h3>Review {labels[review.operation as Operation]?.toLowerCase()||review.operation}</h3><p className="muted small">Adapter: {review.adapter} · Deposit policy: {review.screening_policy}</p>
-      <dl className="privacy-balances"><dt>Amount</dt><dd>{formatStrk(review.amount)} STRK</dd><dt>Pool fee</dt><dd>{formatStrk(review.pool_fee)} STRK</dd><dt>Maximum network fee</dt><dd>{formatStrk(review.max_network_fee)} STRK</dd></dl>
-      <p className="small">Recipient</p><code className="addr">{review.recipient}</code>
-      {review.operation==="deposit"&&<p>{review.screening_attached?"Screening signature received.":"Custom pool policy · no screening attestation attached."}</p>}
-      {review.warnings.map((w,i)=><p className="muted small" key={i}>{w}</p>)}
-      <p className="muted small">This review expires in five minutes. The wallet will ask for final approval before spending.</p>
-      <p className="muted small">Approve or reject in the wallet confirmation dialog.</p>
     </div>}
     {submitted&&<div className="privacy-card" role="status">
       {accepted?<><p>✓ Transaction accepted. You can continue.</p><details><summary>View receipt</summary><code className="addr">{submitted.transaction_hash}</code><p className="muted small">{receipt?.execution_status} · {receipt?.finality_status} · block {receipt?.block_number}</p></details></>:<>
@@ -200,6 +220,6 @@ export function Privacy({status}: {status: Status}) {
     {history.length>0&&<details className="privacy-card"><summary>Recent privacy transactions</summary>{history.map(h=><div key={h.transaction_hash}><code className="addr">{h.transaction_hash}</code><button className="ghost" disabled={Boolean(busy)} onClick={()=>{setSubmitted(h);setReceipt(null);}}>Open receipt check</button></div>)}</details>}
     {busy&&<p className="privacy-progress" role="status">{busy}</p>}
     {balanceError&&<p role="status" className="muted small">{balanceError}</p>}
-    {error&&<div className="privacy-error" role="alert"><p>{error}</p><button className="ghost" disabled={Boolean(busy)} onClick={()=>{setError("");setReview(null);}}>Dismiss</button></div>}
+    {error&&<div className="privacy-error" role="alert"><p>{error}</p><button className="ghost" disabled={Boolean(busy)} onClick={()=>{setError("");}}>Dismiss</button></div>}
   </section>;
 }

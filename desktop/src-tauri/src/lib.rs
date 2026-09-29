@@ -140,6 +140,11 @@ async fn privacy_submit(state: State<'_, DesktopState>, review_id:String) -> Res
     wallet_rpc::privacy::submit(&state.server,"desktop",None,&review_id).await.map_err(|e|e.to_string())
 }
 #[tauri::command]
+async fn privacy_execute(state: State<'_, DesktopState>, request: wallet_rpc::privacy::Request, limits: wallet_rpc::privacy::DesktopLimits) -> Result<serde_json::Value,String> {
+    state.server.touch_activity();
+    wallet_rpc::privacy::execute_desktop(&state.server,request,limits).await.map_err(|e|e.to_string())
+}
+#[tauri::command]
 async fn privacy_receipt(state: State<'_, DesktopState>, transaction_hash:String, chain_id:String) -> Result<serde_json::Value,String> {
     let felt=wallet_core::Felt::from_hex(&chain_id).map_err(|_|"Invalid chain")?;
     let chain=ChainId::from_felt(&felt).map_err(|_|"Invalid chain")?;
@@ -949,6 +954,7 @@ pub fn run() {
             set_privacy_settings,
             privacy_run,
             privacy_submit,
+            privacy_execute,
             privacy_receipt,
             privacy_history,
             cancel_setup,

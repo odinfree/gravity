@@ -8,6 +8,27 @@ Use the [entry template](#entry-template) at the bottom for every new entry.
 
 ---
 
+## 2026-09-29 — Live screening and native one-click actions
+
+- Installed the screened-deposit build, started one shared adapter and verified
+  operator prove entitlement. The live hosted route accepted real signed jobs
+  and returned proofs plus screening attestations. Three approved 10 STRK
+  deposits reached successful mainnet receipts; private discovery reconciled a
+  30 STRK increase. One additional proof was not broadcast after rejection.
+- Replaced account, action and shielding-provider dropdowns with visible radio
+  choices after the native menu ignored automated selection. Prover selection
+  saves in one click and leaves the configured non-deposit prover available.
+- At the user's explicit request, native action buttons authorize the exact
+  account/network/recipient/amount and displayed pool/network fee ceilings
+  before proving, then submit without a second dialog. Estimates above either
+  ceiling fail before signing/broadcast. Agent submit retains its approval path.
+- Validation: 17 desktop tests, frontend build, full Rust workspace and strict
+  clippy pass. Both explicit SDK/Rust pipelines pass, including fee-overrun zero
+  broadcasts, unchanged review rejection, one-shot submission and recovery.
+- The native build and full funded transfer/withdrawal sequence are still being
+  verified. This security-sensitive change needs independent review; the
+  production audit/portability gates remain blocked.
+
 ## 2026-09-29 — Complete the previously blocked integration checks
 
 - Network and loopback access became available. Re-ran the full Rust workspace:

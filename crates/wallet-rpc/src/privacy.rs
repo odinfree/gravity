@@ -918,11 +918,70 @@ async fn read_frame<R: tokio::io::AsyncBufRead + Unpin>(
     }
 }
 
+/// One native desktop click authorizes only this request and these fee ceilings.
+/// This entry point is not exposed through the agent JSON-RPC dispatcher.
+#[derive(Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct DesktopLimits {
+    pub max_pool_fee: String,
+    pub max_network_fee: String,
+}
+impl DesktopLimits {
+    fn validate(&self) -> Result<(), WalletRpcError> {
+        integer(&self.max_pool_fee)?;
+        if integer(&self.max_network_fee)? == 0 {
+            return Err(err("Set a positive maximum network fee"));
+        }
+        Ok(())
+    }
+    fn check(&self, result: &Value) -> Result<(), WalletRpcError> {
+        self.validate()?;
+        for (name, ceiling) in [
+            ("pool_fee", &self.max_pool_fee),
+            ("max_network_fee", &self.max_network_fee),
+        ] {
+            if integer(
+                result[name]
+                    .as_str()
+                    .ok_or_else(|| err("Missing prepared fee"))?,
+            )? > integer(ceiling)?
+            {
+                return Err(err("Prepared fees exceed the limits shown when you clicked. Nothing was submitted; review the limits and try again."));
+            }
+        }
+        Ok(())
+    }
+}
+pub async fn execute_desktop(
+    state: &ServerState,
+    request: Request,
+    limits: DesktopLimits,
+) -> Result<Value, WalletRpcError> {
+    limits.validate()?;
+    if request.mode != "prepare" {
+        return Err(err("Expected a privacy transaction"));
+    }
+    let review = run(state, "desktop", None, request, false).await?;
+    let id = review["review_id"]
+        .as_str()
+        .ok_or_else(|| err("Missing prepared transaction"))?;
+    submit_inner(state, "desktop", None, id, Some(&limits)).await
+}
+
 pub async fn submit(
     state: &ServerState,
     owner: &str,
     scope: Option<&str>,
     id: &str,
+) -> Result<Value, WalletRpcError> {
+    submit_inner(state, owner, scope, id, None).await
+}
+async fn submit_inner(
+    state: &ServerState,
+    owner: &str,
+    scope: Option<&str>,
+    id: &str,
+    desktop_limits: Option<&DesktopLimits>,
 ) -> Result<Value, WalletRpcError> {
     let privacy = state
         .privacy
@@ -966,9 +1025,14 @@ pub async fn submit(
     let summary=format!("{} {} STRK on {}. From {}. Recipient {}. Pool fee {} STRK; maximum network fee {} STRK. Deposits/withdrawals and this submitting account remain public.",
         prepared.request.operation,strk(integer(r["amount"].as_str().ok_or_else(||err("Missing amount"))?)?),prepared.request.chain_id,prepared.account.address,r["recipient"].as_str().unwrap_or("self"),
         strk(integer(r["pool_fee"].as_str().ok_or_else(||err("Missing pool fee"))?)?),strk(integer(r["max_network_fee"].as_str().ok_or_else(||err("Missing network fee"))?)?));
-    // Privacy spending always presents its own concrete review, including for a
-    // client with an old generic auto-approval grant.
-    if state
+    if let Some(limits) = desktop_limits {
+        // Only execute_desktop can supply limits. Generic agent grants never
+        // acquire this path, and all preparation/signing checks still run.
+        if owner != "desktop" || scope.is_some() {
+            return Err(WalletRpcError::Forbidden);
+        }
+        limits.check(r)?;
+    } else if state
         .approver
         .request_approval(ApprovalRequest {
             client_label: owner.into(),

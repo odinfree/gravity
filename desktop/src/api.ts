@@ -150,6 +150,7 @@ export const api = {
   setPrivacySettings: (settings: PrivacySettings) => invoke<void>("set_privacy_settings", { settings }),
   privacyStatus: (request: PrivacyRequest) => invoke<PrivacyStatus>("privacy_run", { request }),
   privacyPrepare: (request: PrivacyRequest) => invoke<PrivacyReview>("privacy_run", { request }),
+  privacyExecute: (request: PrivacyRequest, limits: {max_pool_fee:string;max_network_fee:string}) => invoke<PrivacySubmission>("privacy_execute", { request, limits }),
   privacySubmit: (reviewId: string) => invoke<PrivacySubmission>("privacy_submit", { reviewId }),
   privacyReceipt: (transactionHash: string, chainId: string) => invoke<PrivacyReceipt>("privacy_receipt", { transactionHash, chainId }),
   privacyHistory: (account: string, chainId: string) => invoke<PrivacySubmission[]>("privacy_history", { account, chainId }),

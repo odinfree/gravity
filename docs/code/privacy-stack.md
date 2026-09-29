@@ -71,11 +71,14 @@ Read [prover configuration](self-hosted-prover.md). Node.js 24+ must be availabl
 2. Check its privacy registration. If an existing pool viewing key differs from
    gravity's derived key, stop and restore the original privacy wallet. gravity
    will not overwrite that registration or claim to recover another wallet's key.
-3. Click **Register** and approve the amount/fees once. gravity prepares the
-   proof, submits after approval, polls the receipt and updates registration.
+3. Review the displayed pool fee and set a maximum network fee (initially 5 STRK).
+   Click **Register** once. gravity prepares the proof, submits within those
+   ceilings, polls the receipt and updates registration.
 4. Require `SUCCEEDED` and `ACCEPTED_ON_L2`/`ACCEPTED_ON_L1`, and wait until the
    receipt block is older than `head - 10` before building a dependent proof.
-5. Click the next action; one final wallet approval follows proof preparation. For a private transfer the recipient must already be
+5. Check the amount and recipient, then click the next action once. The desktop
+   button authorizes proving and submission without a second dialog; an estimate
+   over either displayed fee ceiling fails before broadcast. For a private transfer the recipient must already be
    registered. A withdrawal defaults to this account if no recipient is entered.
 6. Check the receipt and discover notes after acceptance. Fresh notes are excluded
    from the mature spendable balance. The current selector may consolidate all
@@ -120,8 +123,14 @@ the recipient. This integration does not promise unlinkability of the fee payer.
 ## Reviews, receipts and recovery
 
 Preparation does not broadcast. It produces a client/account/network/session/
-configuration-bound review with a five-minute lifetime. Final spending always
-requests human approval, even under a generic permission grant. Rust checks the
+configuration-bound review with a five-minute lifetime. Agent submission always
+requests human approval, even under a generic permission grant. The native
+desktop has a separate `privacy_execute` command: the user action supplies the
+exact request and pool/network fee ceilings before proving. Rust prepares a
+bound review, rejects fees above either ceiling, then consumes it once. This
+command is absent from the agent dispatcher; the existing submit API still
+requires approval. Lock/session changes and configuration changes invalidate
+the operation. Rust checks the
 exact STRK allowance (pool fee plus deposit, or only the fee for other actions),
 review metadata, nonce, current pool fee, proof age and resource-bound cap.
 Screened deposits also require a valid issue timestamp with at least 60 seconds

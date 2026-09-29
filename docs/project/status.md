@@ -9,12 +9,12 @@ agent methods. Build/run steps are in the [README](../../README.md); architectur
 configuration and recovery are in the [privacy guide](../code/privacy-stack.md).
 The first pool adapter is STRK20 v2-compatible and currently handles STRK.
 Different pool ABIs or compliance protocols require another reviewed adapter.
-The [Starkscan deposit adapter](../code/starkscan-screening.md) and native routing
-are implemented. The full synthetic tests now pass after restoring network and
-loopback access. Next: start the one shared adapter, confirm operator access,
-and verify one approved deposit end to end. The new app has not yet replaced
-the installed wallet, and adapter startup has not been verified.
-Do not claim out-of-the-box screening or a live accepted hosted deposit.
+The [Starkscan deposit adapter](../code/starkscan-screening.md) is running locally.
+Operator `prove` access and a live screened deposit are verified: three 10 STRK
+mainnet deposits have successful receipts, and discovery increased by 30 STRK.
+Next: finish private transfer and withdrawal with accepted receipts and balance
+reconciliation. The native one-click change passes synthetic tests and is being
+installed for live verification. Do not claim the complete funded round trip yet.
 
 ## Implemented
 
@@ -27,8 +27,11 @@ Do not claim out-of-the-box screening or a live accepted hosted deposit.
 - Pool/discovery/deposit-policy settings per network. Known pools require
   screening; custom compatible deployments defer policy enforcement to their
   contract when explicitly configured.
-- Register, discover balances, prepare shield/transfer/unshield, review fees,
-  final human approval, one-shot broadcast and receipt journal recovery.
+- Native one-click register/shield/transfer/unshield within displayed pool and
+  network fee ceilings. Agent preparation/submission retains explicit approval.
+  One-shot broadcast and receipt journal recovery are shared by both paths.
+- Visible account/action/prover choices replace native dropdowns; selecting a
+  shielding prover saves immediately without changing the other prover route.
 - Wallet-owned SDK child, constrained Rust signing, exact allowances, explicit
   chain, mature reference blocks and private request-log redaction.
 - Optional mainnet deposit-only Starkscan routing, shared SQLite accounting and
@@ -40,14 +43,20 @@ Do not claim out-of-the-box screening or a live accepted hosted deposit.
   limits, interrupted delivery, result persistence, error redaction and expiry.
 - Five targeted Rust privacy tests passed. `cargo build` and strict workspace
   clippy passed. Seventeen desktop tests and the TypeScript/Vite build passed.
-  The unsigned Apple Silicon app bundle builds; the installed app is unchanged.
+  The unsigned Apple Silicon app bundle builds; the hosted adapter build is installed.
 - Full Rust workspace: 149 tests passed. The separate SDK/Rust signing pipeline
   also passed against synthetic loopback services. Two opt-in checks are excluded
   from the default run; the synthetic pipeline was run explicitly afterward.
 - All 25 SDK/relay tests passed, including socket-based action-builder tests.
   The earlier sandbox `EPERM` limitation is resolved for these checks.
-- No live hosted proof was requested and no funds were moved for this change.
-  These synthetic results do not establish live screening or deposit acceptance.
+- Live hosted proving returned screening signatures. Three approved 10 STRK
+  deposits succeeded and discovery reconciled the 30 STRK increase. A fourth
+  proof was prepared but its final spending confirmation was rejected.
+- Native one-click tests pass with exact fee ceilings; excessive pool/network
+  fees produce zero broadcasts and the existing submit API still rejects
+  denied approvals. Both synthetic SDK/Rust pipelines pass.
+- The full workspace tests, strict clippy, desktop tests and frontend build pass.
+  Native one-click live execution is pending.
 
 ## Previous validation — 2026-09-27
 
@@ -71,11 +80,9 @@ Do not claim out-of-the-box screening or a live accepted hosted deposit.
 - Independent security review of the new viewing-key derivation and signing/
   pool-action path, plus inherited experimental `krusty-kms`, before production
   mainnet use. Structural tests do not establish audit completion or portability.
-- Live operator-authorized screened proving, service startup and mainnet
-  acceptance checks for the new adapter. A plain self-hosted prover does not
-  provide deposit-screening authorization.
 - Live accepted receipts and discovered balances for shield → transfer → withdraw
-  through this integration. Registration is live-verified; shield/transfer/withdraw remain unverified.
+  through this integration. Registration and shielding are live-verified;
+  transfer/withdrawal remain unverified.
 
 ## Remaining
 

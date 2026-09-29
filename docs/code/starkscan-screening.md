@@ -58,8 +58,8 @@ curl --fail --silent --show-error http://127.0.0.1:3001/ \
   --data '{"jsonrpc":"2.0","id":1,"method":"gravity_relayStatus","params":[]}'
 ```
 
-In **Privacy → Privacy services → Shielding prover**, select **Starkscan** and
-save. This setting is limited to the current default mainnet STRK20 pool. Keep
+In **Privacy → Shielding prover**, click **Starkscan**. The choice saves
+immediately. This setting is limited to the current default mainnet STRK20 pool. Keep
 the general prover in Settings pointed at your existing self-hosted service.
 The wallet never needs the Starkscan key. The adapter and hosted prover receive
 the deposit's private inputs, including viewing material contained in the signed
@@ -99,7 +99,7 @@ using the same idempotency key. The adapter never generates a replacement key
 for an uncertain request. No public broadcast happens in this process.
 
 The adapter requires a fresh screening signature on every returned deposit proof.
-gravity checks its age again before and after final approval and against the
+gravity checks its age again before spending (including after agent approval) and against the
 chain timestamp before signing the public transaction. It reserves 60 seconds
 for inclusion within the pool's current five-minute deadline. This cannot
 guarantee inclusion; delayed transactions can still fail on chain.

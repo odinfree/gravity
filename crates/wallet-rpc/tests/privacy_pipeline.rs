@@ -118,6 +118,14 @@ impl prover::Prover for Proof {
 #[tokio::test]
 #[ignore = "requires Node.js 24+ and npm --prefix privacy run build"]
 async fn real_sdk_child_signing_approval_replay_and_uncertain_receipt_recovery() {
+    pipeline(false).await;
+}
+#[tokio::test]
+#[ignore = "requires Node.js 24+ and npm --prefix privacy run build"]
+async fn desktop_one_click_enforces_fee_caps_without_relaxing_review_submission() {
+    pipeline(true).await;
+}
+async fn pipeline(desktop: bool) {
     let fixture = Chain::default();
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let url = format!("http://{}", listener.local_addr().unwrap());
@@ -127,7 +135,10 @@ async fn real_sdk_child_signing_approval_replay_and_uncertain_receipt_recovery()
     let http = tokio::spawn(async move {
         axum::serve(listener, app).await.unwrap();
     });
-    let dir = std::env::temp_dir().join(format!("gravity-privacy-pipeline-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!(
+        "gravity-privacy-pipeline-{}",
+        (std::process::id() as u64 * 2 + u64::from(desktop))
+    ));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
     let settings = Arc::new(prover::SettingsStore::load(
@@ -169,9 +180,16 @@ async fn real_sdk_child_signing_approval_replay_and_uncertain_receipt_recovery()
         "test",
         reg,
     )));
-    let state = ServerState::new(session.clone(), Arc::new(AutoApprover(Decision::Approve)))
-        .with_node(ChainId::Mainnet, Arc::new(HttpStarknetRpc::new(url)))
-        .with_prover(prover);
+    let state = ServerState::new(
+        session.clone(),
+        Arc::new(AutoApprover(if desktop {
+            Decision::Reject
+        } else {
+            Decision::Approve
+        })),
+    )
+    .with_node(ChainId::Mainnet, Arc::new(HttpStarknetRpc::new(url)))
+    .with_prover(prover);
     let worker = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../../desktop/src-tauri/resources/privacy/worker.cjs");
     let state = privacy::attach(state, dir.join("privacy"), worker);
@@ -197,7 +215,43 @@ async fn real_sdk_child_signing_approval_replay_and_uncertain_receipt_recovery()
     assert!(review.get("viewing_key").is_none());
     let id = review["review_id"].as_str().unwrap();
     assert!(privacy::submit(&state, "foreign", None, id).await.is_err()); // does not consume owner's review
-    let sent = privacy::submit(&state, "desktop", None, id).await.unwrap();
+    let sent = if desktop {
+        // The normal review endpoint still requires approval, even for desktop.
+        assert!(matches!(
+            privacy::submit(&state, "desktop", None, id).await,
+            Err(wallet_rpc::WalletRpcError::UserRefused)
+        ));
+        for (pool, network) in [
+            ("6000000000000000000", "92"),
+            ("5000000000000000000", "93"),
+            ("6000000000000000000", "0"),
+        ] {
+            assert!(privacy::execute_desktop(
+                &state,
+                req.clone(),
+                privacy::DesktopLimits {
+                    max_pool_fee: pool.into(),
+                    max_network_fee: network.into(),
+                }
+            )
+            .await
+            .is_err());
+            assert_eq!(fixture.broadcasts.load(Ordering::SeqCst), 0);
+        }
+        // Exact fee ceilings pass without consulting the rejecting approver.
+        privacy::execute_desktop(
+            &state,
+            req.clone(),
+            privacy::DesktopLimits {
+                max_pool_fee: "6000000000000000000".into(),
+                max_network_fee: "93".into(),
+            },
+        )
+        .await
+        .unwrap()
+    } else {
+        privacy::submit(&state, "desktop", None, id).await.unwrap()
+    };
     assert_eq!(sent["status"], "submission_unknown");
     assert_eq!(fixture.broadcasts.load(Ordering::SeqCst), 1);
     assert!(privacy::submit(&state, "desktop", None, id).await.is_err());
