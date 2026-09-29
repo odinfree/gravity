@@ -13,8 +13,9 @@ The [Starkscan deposit adapter](../code/starkscan-screening.md) is running local
 Operator `prove` access and a live screened deposit are verified: three 10 STRK
 mainnet deposits have successful receipts, and discovery increased by 30 STRK.
 Next: finish private transfer and withdrawal with accepted receipts and balance
-reconciliation. The native one-click change passes synthetic tests and is being
-installed for live verification. Do not claim the complete funded round trip yet.
+reconciliation. The native one-click change is installed, and its code commit passed CI.
+Visible account choices work in the installed app; live one-click execution
+awaits the test recipient registration action. Do not claim the complete funded round trip yet.
 
 ## Implemented
 

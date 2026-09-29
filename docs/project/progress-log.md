@@ -8,6 +8,15 @@ Use the [entry template](#entry-template) at the bottom for every new entry.
 
 ---
 
+## 2026-09-29 — Install and publish the one-click build
+
+- Installed the rebuilt native app and verified that visible account controls
+  select the intended recipient account. The existing wallet/vault and both
+  prover routes were retained.
+- Pushed the one-click implementation as `3d2eb08`; GitHub CI passed. Full live
+  transfer/withdrawal verification is waiting for the user's one-click recipient
+  registration. No claim of a completed round trip or independent audit.
+
 ## 2026-09-29 — Live screening and native one-click actions
 
 - Installed the screened-deposit build, started one shared adapter and verified
