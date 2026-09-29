@@ -462,3 +462,29 @@ button.setup-create { display: flex; align-items: center; justify-content: space
   .onboarding { padding: 16px; }
   .recovery-words { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* Always visible while a proof or transaction is in flight. */
+.privacy-panel.has-progress { padding-bottom: 210px; }
+.privacy-live-progress { position: fixed; bottom: 12px; left: 12px; right: 12px; z-index: 20; padding: 14px 16px; border: 1px solid var(--accent); border-radius: 12px; background: var(--panel); box-shadow: 0 8px 32px #0009; }
+.privacy-progress-heading { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+.privacy-progress-heading strong, .privacy-progress-heading span { display: block; }
+.privacy-progress-heading strong { font-size: 15px; }
+.privacy-progress-heading span { color: var(--muted); font-size: 12px; margin-top: 3px; }
+.privacy-elapsed { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.privacy-progress-track { height: 4px; background: var(--line); border-radius: 4px; overflow: hidden; margin: 12px 0; }
+.privacy-progress-track span { display: block; height: 100%; width: 35%; border-radius: 4px; background: var(--accent); animation: privacy-running 1.5s ease-in-out infinite alternate; }
+@keyframes privacy-running { from { transform: translateX(-30%); } to { transform: translateX(215%); } }
+@media (prefers-reduced-motion: reduce) { .privacy-progress-track span { animation: none; width: 100%; } }
+.privacy-progress-steps { display: flex; justify-content: space-between; gap: 8px; padding: 0; margin: 10px 0; list-style: none; color: var(--muted); font-size: 12px; }
+.privacy-progress-steps .active { color: var(--accent); font-weight: 700; }
+.privacy-progress-steps .done { color: #70d59a; }
+.privacy-live-progress p { font-size: 12px; line-height: 1.4; margin: 8px 0 0; overflow-wrap: anywhere; }
+.privacy-live-progress.succeeded { border-color: var(--ok); }
+.privacy-live-progress.failed { border-color: var(--err); }
+.privacy-live-progress button { margin-top: 8px; padding: 4px 10px; font-size: 12px; }
+.privacy-available { padding: 12px; border-radius: 8px; background: var(--panel); }
+.privacy-available dl { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin: 0 0 8px; }
+.privacy-available dt { color: var(--muted); }
+.privacy-available dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.privacy-percentages { display: flex; gap: 8px; }
+.privacy-percentages button { flex: 1; }

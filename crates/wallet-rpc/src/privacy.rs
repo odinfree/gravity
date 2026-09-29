@@ -353,6 +353,22 @@ async fn account(
     found
 }
 
+/// Safe, coarse stages only: never stream private inputs or provider errors.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ProgressStage {
+    Preparing,
+    Proving,
+    CheckingFees,
+    Submitting,
+}
+pub type ProgressReporter = dyn Fn(ProgressStage) + Send + Sync;
+fn report(progress: Option<&ProgressReporter>, stage: ProgressStage) {
+    if let Some(progress) = progress {
+        progress(stage);
+    }
+}
+
 /// Native UI uses owner="desktop"/scope=None. RPC always supplies verified client scope.
 pub async fn run(
     state: &ServerState,
@@ -360,6 +376,16 @@ pub async fn run(
     scope: Option<&str>,
     req: Request,
     prompt: bool,
+) -> Result<Value, WalletRpcError> {
+    run_with_progress(state, owner, scope, req, prompt, None).await
+}
+async fn run_with_progress(
+    state: &ServerState,
+    owner: &str,
+    scope: Option<&str>,
+    req: Request,
+    prompt: bool,
+    progress: Option<&ProgressReporter>,
 ) -> Result<Value, WalletRpcError> {
     req.validate()?;
     let privacy = state
@@ -438,7 +464,7 @@ pub async fn run(
         }
     }
     let epoch = state.session.lock().await.epoch();
-    let mut result = worker(state, &account, chain, &req, &config).await?;
+    let mut result = worker(state, &account, chain, &req, &config, progress).await?;
     if state.session.lock().await.epoch() != epoch {
         return Err(err("Wallet session changed; prepare again"));
     }
@@ -633,6 +659,7 @@ async fn worker(
     chain: ChainId,
     request: &Request,
     config: &Value,
+    progress: Option<&ProgressReporter>,
 ) -> Result<Value, WalletRpcError> {
     let privacy = state
         .privacy
@@ -784,6 +811,7 @@ async fn worker(
                     let base = frame["payload"]["block_number"]
                         .as_u64()
                         .ok_or_else(|| err("Missing proof base"))?;
+                    report(progress, ProgressStage::Proving);
                     let result = if uses_starkscan(request, config) {
                         screened_proof(tx, base).await?
                     } else {
@@ -812,6 +840,7 @@ async fn worker(
                         }
                         }
                     };
+                    report(progress, ProgressStage::CheckingFees);
                     screening_issued_at =
                         result["additional_data"]["signature"]["issued_at"].clone();
                     proved = true;
@@ -957,15 +986,24 @@ pub async fn execute_desktop(
     request: Request,
     limits: DesktopLimits,
 ) -> Result<Value, WalletRpcError> {
+    execute_desktop_with_progress(state, request, limits, None).await
+}
+pub async fn execute_desktop_with_progress(
+    state: &ServerState,
+    request: Request,
+    limits: DesktopLimits,
+    progress: Option<&ProgressReporter>,
+) -> Result<Value, WalletRpcError> {
+    report(progress, ProgressStage::Preparing);
     limits.validate()?;
     if request.mode != "prepare" {
         return Err(err("Expected a privacy transaction"));
     }
-    let review = run(state, "desktop", None, request, false).await?;
+    let review = run_with_progress(state, "desktop", None, request, false, progress).await?;
     let id = review["review_id"]
         .as_str()
         .ok_or_else(|| err("Missing prepared transaction"))?;
-    submit_inner(state, "desktop", None, id, Some(&limits)).await
+    submit_inner(state, "desktop", None, id, Some(&limits), progress).await
 }
 
 pub async fn submit(
@@ -974,7 +1012,7 @@ pub async fn submit(
     scope: Option<&str>,
     id: &str,
 ) -> Result<Value, WalletRpcError> {
-    submit_inner(state, owner, scope, id, None).await
+    submit_inner(state, owner, scope, id, None, None).await
 }
 async fn submit_inner(
     state: &ServerState,
@@ -982,6 +1020,7 @@ async fn submit_inner(
     scope: Option<&str>,
     id: &str,
     desktop_limits: Option<&DesktopLimits>,
+    progress: Option<&ProgressReporter>,
 ) -> Result<Value, WalletRpcError> {
     let privacy = state
         .privacy
@@ -1157,6 +1196,7 @@ async fn submit_inner(
         &journal,
         &json!({"transaction_hash":tx_hash,"chain_id":prepared.request.chain_id,"account":prepared.account.address,"status":"submission_pending"}),
     )?;
+    report(progress, ProgressStage::Submitting);
     let submitted = node
         .add_invoke(
             &sender,

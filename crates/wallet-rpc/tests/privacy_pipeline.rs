@@ -239,16 +239,30 @@ async fn pipeline(desktop: bool) {
             assert_eq!(fixture.broadcasts.load(Ordering::SeqCst), 0);
         }
         // Exact fee ceilings pass without consulting the rejecting approver.
-        privacy::execute_desktop(
+        let stages = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let observed = stages.clone();
+        let report = move |stage| observed.lock().unwrap().push(stage);
+        let sent = privacy::execute_desktop_with_progress(
             &state,
             req.clone(),
             privacy::DesktopLimits {
                 max_pool_fee: "6000000000000000000".into(),
                 max_network_fee: "93".into(),
             },
+            Some(&report),
         )
         .await
-        .unwrap()
+        .unwrap();
+        assert_eq!(
+            *stages.lock().unwrap(),
+            vec![
+                privacy::ProgressStage::Preparing,
+                privacy::ProgressStage::Proving,
+                privacy::ProgressStage::CheckingFees,
+                privacy::ProgressStage::Submitting
+            ]
+        );
+        sent
     } else {
         privacy::submit(&state, "desktop", None, id).await.unwrap()
     };

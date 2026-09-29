@@ -80,7 +80,16 @@ Read [prover configuration](self-hosted-prover.md). Node.js 24+ must be availabl
    button authorizes proving and submission without a second dialog; an estimate
    over either displayed fee ceiling fails before broadcast. For a private transfer the recipient must already be
    registered. A withdrawal defaults to this account if no recipient is entered.
-6. Check the receipt and discover notes after acceptance. Fresh notes are excluded
+6. The progress panel appears immediately and stays visible while scrolling. It
+   reports preparation, proving, fee checking, submission and confirmation, with
+   elapsed time. Stages come from the backend; there is no invented percentage
+   or ETA, and confirmation requires a successful on-chain receipt.
+7. Unshield and private transfer show shielded, spendable and public fee balances
+   beside the amount. Discovery runs automatically; fresh notes refresh while
+   settling. The 25% and 50% shortcuts use spendable funds. **100% selects 95%**
+   and leaves a 5% shielded buffer, rounded down in base units. This reserve does
+   not pay the current pool's fees: keep public STRK for pool and network fees.
+8. Check the receipt and discover notes after acceptance. Fresh notes are excluded
    from the mature spendable balance. The current selector may consolidate all
    mature notes for the token; it is not a coin-selection privacy optimizer.
 

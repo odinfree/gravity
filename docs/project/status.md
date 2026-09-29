@@ -14,8 +14,9 @@ Operator `prove` access and a live screened deposit are verified: three 10 STRK
 mainnet deposits have successful receipts, and discovery increased by 30 STRK.
 Next: finish private transfer and withdrawal with accepted receipts and balance
 reconciliation. The native one-click change is installed, and its code commit passed CI.
-Visible account choices work in the installed app; live one-click execution
-awaits the test recipient registration action. Do not claim the complete funded round trip yet.
+The recipient account has since registered and received a successful shield
+through the one-click build. Progress feedback and percentage amount controls
+are implemented and validated; transfer/withdrawal reconciliation remains next. Do not claim the complete funded round trip yet.
 
 ## Implemented
 
@@ -33,6 +34,9 @@ awaits the test recipient registration action. Do not claim the complete funded 
   One-shot broadcast and receipt journal recovery are shared by both paths.
 - Visible account/action/prover choices replace native dropdowns; selecting a
   shielding prover saves immediately without changing the other prover route.
+- Always-visible transaction stages and elapsed time, driven by backend events
+  and receipts. Unshield/transfer show spendable funds beside 25/50/100 percent
+  shortcuts; 100 percent selects 95 percent and preserves a shielded buffer.
 - Wallet-owned SDK child, constrained Rust signing, exact allowances, explicit
   chain, mature reference blocks and private request-log redaction.
 - Optional mainnet deposit-only Starkscan routing, shared SQLite accounting and
@@ -43,7 +47,7 @@ awaits the test recipient registration action. Do not claim the complete funded 
 - Nine shared-relay tests passed with injected HTTP responses, including UTC
   limits, interrupted delivery, result persistence, error redaction and expiry.
 - Five targeted Rust privacy tests passed. `cargo build` and strict workspace
-  clippy passed. Seventeen desktop tests and the TypeScript/Vite build passed.
+  clippy passed. Twenty-one desktop tests and the TypeScript/Vite build passed.
   The unsigned Apple Silicon app bundle builds; the hosted adapter build is installed.
 - Full Rust workspace: 149 tests passed. The separate SDK/Rust signing pipeline
   also passed against synthetic loopback services. Two opt-in checks are excluded
@@ -57,7 +61,10 @@ awaits the test recipient registration action. Do not claim the complete funded 
   fees produce zero broadcasts and the existing submit API still rejects
   denied approvals. Both synthetic SDK/Rust pipelines pass.
 - The full workspace tests, strict clippy, desktop tests and frontend build pass.
-  Native one-click live execution is pending.
+  Native one-click registration and shielding are now live-verified.
+- Progress stages and fee checks pass both SDK/Rust pipelines. Percentage
+  controls use exact base units, exclude unsettled funds, and disable on missing
+  discovery; the wallet-size UI preview was visually checked with synthetic data.
 
 ## Previous validation — 2026-09-27
 

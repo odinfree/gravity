@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { api, type Account, type Status, type PrivacySettings, type PrivacyStatus, type PrivacySubmission, type PrivacyReceipt } from "../api";
-import { parseStrk, formatStrk } from "../privacy-amount";
+import { parseStrk, formatStrk, percentStrk } from "../privacy-amount";
+
+import { PrivacyProgress, type ProgressState } from "./PrivacyProgress";
 
 type Operation = "register" | "deposit" | "transfer" | "withdraw";
 const labels: Record<Operation,string> = {register:"Register",deposit:"Shield",transfer:"Private transfer",withdraw:"Unshield"};
@@ -28,6 +30,7 @@ export function Privacy({status}: {status: Status}) {
   const [quantity,setQuantity]=useState("10");
   const [recipient,setRecipient]=useState("");
   const [busy,setBusy]=useState("");
+  const [progress,setProgress]=useState<ProgressState|null>(null);
   const [error,setError]=useState("");
   const [balanceError,setBalanceError]=useState("");
   const [networkFeeLimit,setNetworkFeeLimit]=useState("5");
@@ -45,7 +48,7 @@ export function Privacy({status}: {status: Status}) {
     return()=>{active=false;generation.current++;};
   },[]);
   useEffect(()=>{
-    generation.current++;setData(null);setSubmitted(null);setReceipt(null);setError("");setBalanceError("");setBusy("");
+    generation.current++;setProgress(null);setData(null);setSubmitted(null);setReceipt(null);setError("");setBalanceError("");setBusy("");
     let active=true;setHistory([]);
     if(selected)api.privacyHistory(selected,chainId).then(h=>{if(active)setHistory(h);}).catch(e=>{if(active)setError(String(e));});
     return()=>{active=false;};
@@ -66,16 +69,28 @@ export function Privacy({status}: {status: Status}) {
     }
   });}
   function prepare(op:Operation){return task("Proving and submitting within your fee limits…",async epoch=>{
-    if(!data)throw new Error("Wait for the account and pool fee check.");
-    const amount=op==="register"?"0":parseStrk(quantity);
-    const target=op==="withdraw"?(recipient.trim()||selected):recipient.trim();
-    if(op==="transfer" && !/^0x[0-9a-fA-F]+$/.test(target))throw new Error("Enter the recipient’s Starknet address.");
     setSubmitted(null);setReceipt(null);
+    setProgress({stage:"preparing",label:labels[op],startedAt:Date.now()});
+    let watching=true;
     try {
+      if(!data)throw new Error("Wait for the account and pool fee check.");
+      const amount=op==="register"?"0":parseStrk(quantity);
+      const target=op==="withdraw"?(recipient.trim()||selected):recipient.trim();
+      if(op==="transfer" && !/^0x[0-9a-fA-F]+$/.test(target))throw new Error("Enter the recipient’s Starknet address.");
+      const maxNetworkFee=parseStrk(networkFeeLimit);
+      setProgress(p=>p?{...p,label:op==="register"?"Register account":`${labels[op]} · ${formatStrk(amount)} STRK`}:p);
       const sent=await api.privacyExecute({...context,mode:"prepare",operation:op,amount,recipient:target||selected},
-        {max_pool_fee:data.pool_fee,max_network_fee:parseStrk(networkFeeLimit)});
-      if(epoch===generation.current){setSubmitted(sent);setHistory(h=>[sent,...h]);}
+        {max_pool_fee:data.pool_fee,max_network_fee:maxNetworkFee},stage=>{
+          if(watching&&epoch===generation.current)setProgress(p=>p?{...p,stage}:p);
+        });
+      watching=false;
+      if(epoch===generation.current){
+        setProgress(p=>p?{...p,stage:"confirming"}:p);
+        setSubmitted(sent);setHistory(h=>[sent,...h]);
+      }
     } catch(e) {
+      watching=false;
+      if(epoch===generation.current)setProgress(p=>p?{...p,stage:"failed",finishedAt:Date.now(),error:String(e)}:p);
       if(op==="deposit")try {
         const current=await api.privacyStatus({...context,mode:"status"});
         if(epoch===generation.current)setData(current);
@@ -111,6 +126,21 @@ export function Privacy({status}: {status: Status}) {
     api.privacyStatus({...context,mode:"status"}).then(value=>{if(active&&epoch===generation.current)setData(value);}).catch(e=>{if(active&&epoch===generation.current)setError(String(e));});
     return()=>{active=false;};
   },[selected,chainId,runtime,editing]);
+  useEffect(()=>{
+    if(!selected||!runtime||editing||!data?.registered||operation==="deposit")return;
+    void refresh(true);
+  },[selected,chainId,runtime,editing,data?.registered,operation]);
+  useEffect(()=>{
+    if(progress?.stage!=="succeeded")return;
+    const timer=setTimeout(()=>setProgress(p=>p?.stage==="succeeded"?null:p),10000);
+    return()=>clearTimeout(timer);
+  },[progress?.stage]);
+  // Fresh notes become spendable after the proof base advances; refresh without another click.
+  useEffect(()=>{
+    if(operation==="deposit"||busy||balanceError||data?.shielded_balance===undefined||data.spendable_balance===undefined||BigInt(data.shielded_balance)<=BigInt(data.spendable_balance))return;
+    const timer=setTimeout(()=>{void refresh(true);},5000);
+    return()=>clearTimeout(timer);
+  },[operation,busy,balanceError,data?.shielded_balance,data?.spendable_balance]);
   // Accepted registration must age past the proof base before dependent actions.
   useEffect(()=>{
     if(!data?.registered||data.registration_mature||busy)return;
@@ -127,6 +157,9 @@ export function Privacy({status}: {status: Status}) {
         if(!active||epoch!==generation.current)return;
         setReceipt(value);
         if(["ACCEPTED_ON_L2","ACCEPTED_ON_L1"].includes(value.finality_status??"")){
+          if(value.execution_status==="SUCCEEDED"||value.execution_status==="REVERTED")setProgress(p=>p?{...p,
+            stage:value.execution_status==="SUCCEEDED"?"succeeded":"failed",finishedAt:Date.now(),
+            error:value.execution_status==="REVERTED"?"The transaction reverted on chain. Check the receipt; network fees may still apply.":undefined}:p);
           setHistory(h=>h.map(v=>v.transaction_hash===submitted.transaction_hash?{...v,status:value.execution_status??v.status}:v));
           // Reconcile public state separately: unavailable discovery must not hide
           // registration or restart polling an already-final receipt.
@@ -154,7 +187,11 @@ export function Privacy({status}: {status: Status}) {
   const hosted=settings?.[network].deposit_prover==="starkscan";
   const relay=data?.hosted_prover;
   const hostedBlocked=hosted&&(!relay?.reachable||relay.local_remaining===0||Boolean(relay.pending?.length)||Boolean(relay.retry_after_seconds));
-  return <section className="panel privacy-panel">
+  const needsShielded=operation!=="deposit";
+  const spendable=data?.spendable_balance;
+  const activeStage=progress&&progress.stage!=="succeeded"&&progress.stage!=="failed"?progress.stage:null;
+  const actionCaption=activeStage?({preparing:"Preparing…",proving:"Generating proof…",checking_fees:"Checking fees…",submitting:"Submitting…",confirming:"Confirming…"}[activeStage]):null;
+  return <section className={`panel privacy-panel${progress?" has-progress":""}`}>
     <div className="privacy-title"><h2>Privacy</h2><span className="badge">{network==="mainnet"?"Mainnet":"Sepolia"}</span></div>
     <p className="muted small">Starknet privacy with your chosen services. The current adapter supports STRK20-compatible pools and STRK.</p>
     <PrivacyChoices name="privacy-account" label="Account" value={selected} disabled={Boolean(busy)} onChange={setSelected}
@@ -194,18 +231,31 @@ export function Privacy({status}: {status: Status}) {
         <dt>Pool fee per operation</dt><dd>{formatStrk(data.pool_fee)} STRK</dd>
         <dt>Registration</dt><dd>{data.registered?(data.registration_mature?"Registered":"Registered · settling…"):"Not registered with this pool"}</dd>
         <dt>Shielding</dt><dd>{screeningMissing?"Unavailable · screening missing":screeningRequired?"Screening not verified":"Pool policy applies"}</dd></dl>
-      {!data.registered&&<><p className="muted small">Register once to use this pool. Register submits automatically within the fee limits shown above.</p><button className="primary" disabled={disabled} onClick={()=>prepare("register")}>Register</button></>}
+      {!data.registered&&<><p className="muted small">Register once to use this pool. Register submits automatically within the fee limits shown above.</p><button className="primary" disabled={disabled} onClick={()=>prepare("register")}>{actionCaption||"Register"}</button></>}
       {hosted&&<p className="muted small" role="status">{!relay?.reachable?"Starkscan adapter is not running.":`Hosted attempts today: ${relay.local_attempts} / ${relay.local_limit} across local clients. Resets at 00:00 UTC. This counter does not include requests sent outside the adapter.`}{relay?.pending?.length?" A hosted proof is unresolved; wait or check the shared relay status.":""}{relay?.retry_after_seconds?` Retry after ${relay.retry_after_seconds} seconds.`:""}</p>}
     </div>}
     {data?.registered&&(!submitted||accepted||receipt?.execution_status==="REVERTED")&&<div className="privacy-card">
       <PrivacyChoices name="privacy-operation" label="Action" value={operation} disabled={Boolean(busy)} onChange={value=>setOperation(value as Operation)}
         options={[{value:"deposit",label:"Shield STRK"},{value:"transfer",label:"Private transfer"},{value:"withdraw",label:"Unshield STRK"}]}/>
+      {needsShielded&&<div className="privacy-available" aria-label="Available shielded funds">
+        <dl><dt>Shielded balance</dt><dd>{data.shielded_balance===undefined?(balanceError?"Unavailable":"Discovering…"):`${formatStrk(data.shielded_balance)} STRK`}</dd>
+          <dt>Available to {operation==="withdraw"?"unshield":"transfer"}</dt><dd>{spendable===undefined?(balanceError?"Unavailable":"Discovering…"):`${formatStrk(spendable)} STRK`}</dd>
+          <dt>Public balance for fees</dt><dd>{formatStrk(data.public_balance)} STRK</dd></dl>
+        <p className="muted small">Only settled notes are spendable. Pool and network fees are paid from your public STRK balance.</p>
+      </div>}
       <label htmlFor="privacy-amount">Amount in STRK</label><input id="privacy-amount" className="input" inputMode="decimal" value={quantity} disabled={Boolean(busy)} onChange={e=>setQuantity(e.target.value)}/>
+      {needsShielded&&<>
+        <div className="privacy-percentages" role="group" aria-label="Choose a percentage of spendable STRK">
+          {([25,50,100] as const).map(percent=><button key={percent} className="ghost" disabled={disabled||Boolean(balanceError)||spendable===undefined||BigInt(spendable)===0n}
+            onClick={()=>setQuantity(percentStrk(spendable!,percent))}>{percent}%</button>)}
+        </div>
+        <p className="muted small">100% uses 95% of your spendable balance and leaves a 5% shielded buffer. Keep public STRK for fees too.</p>
+      </>}
       {operation!=="deposit"&&<><label htmlFor="privacy-recipient">{operation==="transfer"?"Registered recipient":"Public recipient (blank = this account)"}</label><input id="privacy-recipient" className="input" placeholder="0x…" value={recipient} disabled={Boolean(busy)} onChange={e=>setRecipient(e.target.value)}/></>}
       {operation==="deposit"&&<p className="muted small">{screeningMissing?"Direct shielding is unavailable for this pool. The selected prover returned no authorized screening signature; no deposit was submitted.":hosted?"Shielding uses Starkscan’s hosted prover and screening service. Each new proof attempt uses the shared allowance. Your click authorizes proving and submission within the displayed fee limits.":screeningRequired?"This pool requires an authorized screening signature for every deposit. Use an authorized prover or select Starkscan in Privacy services with operator-issued access.":"Shielding makes a public deposit. This pool enforces its configured deposit policy."}</p>}
       {operation==="transfer"&&<p className="muted small">The recipient must be registered. Pool notes stay private, but submitting from this account reveals who paid the network fee.</p>}
       {operation==="withdraw"&&<p className="muted small">Unshielding reveals the amount and recipient. New notes need time to mature before spending.</p>}
-      <button className="primary" disabled={disabled||!data.registration_mature||(operation==="deposit"&&(screeningMissing||hostedBlocked))} onClick={()=>prepare(operation)}>{operation==="deposit"?(screeningMissing||hostedBlocked?"Shielding unavailable":"Shield STRK"):labels[operation]}</button>
+      <button className="primary" disabled={disabled||!data.registration_mature||(needsShielded&&(Boolean(balanceError)||spendable===undefined||BigInt(spendable)===0n))||(operation==="deposit"&&(screeningMissing||hostedBlocked))} onClick={()=>prepare(operation)}>{actionCaption||(operation==="deposit"?(screeningMissing||hostedBlocked?"Shielding unavailable":"Shield STRK"):labels[operation])}</button>
       {!data.registration_mature&&<p className="muted small">Registration is accepted. Waiting for the pool state to settle before your next action…</p>}
     </div>}
     {submitted&&<div className="privacy-card" role="status">
@@ -217,9 +267,10 @@ export function Privacy({status}: {status: Status}) {
         <button className="ghost" disabled={Boolean(busy)} onClick={checkReceipt}>Check now</button>
       </>}
     </div>}
-    {history.length>0&&<details className="privacy-card"><summary>Recent privacy transactions</summary>{history.map(h=><div key={h.transaction_hash}><code className="addr">{h.transaction_hash}</code><button className="ghost" disabled={Boolean(busy)} onClick={()=>{setSubmitted(h);setReceipt(null);}}>Open receipt check</button></div>)}</details>}
-    {busy&&<p className="privacy-progress" role="status">{busy}</p>}
+    {history.length>0&&<details className="privacy-card"><summary>Recent privacy transactions</summary>{history.map(h=><div key={h.transaction_hash}><code className="addr">{h.transaction_hash}</code><button className="ghost" disabled={Boolean(busy)} onClick={()=>{setProgress(null);setSubmitted(h);setReceipt(null);}}>Open receipt check</button></div>)}</details>}
+    {busy&&!activeStage&&<p className="privacy-progress" role="status">{busy}</p>}
+    {progress&&<PrivacyProgress progress={progress} onDismiss={()=>setProgress(null)}/>}
     {balanceError&&<p role="status" className="muted small">{balanceError}</p>}
-    {error&&<div className="privacy-error" role="alert"><p>{error}</p><button className="ghost" disabled={Boolean(busy)} onClick={()=>{setError("");}}>Dismiss</button></div>}
+    {error&&<div className="privacy-error" role="alert"><p>{error}</p><button className="ghost" disabled={Boolean(busy)} onClick={()=>{setError("");setProgress(null);}}>Dismiss</button></div>}
   </section>;
 }

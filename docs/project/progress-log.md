@@ -8,6 +8,24 @@ Use the [entry template](#entry-template) at the bottom for every new entry.
 
 ---
 
+## 2026-09-29 — Visible transaction progress and spendable-balance shortcuts
+
+- Added a fixed progress panel and changing action-button text so a click is
+  acknowledged immediately at any scroll position. A per-invocation Tauri channel
+  reports coarse backend stages without private payloads. Elapsed time is real;
+  no fabricated completion percentage or ETA is shown. Receipt polling alone
+  establishes success; late progress events cannot regress that state.
+- Unshield/private transfer discover and show shielded, spendable and public fee
+  balances beside the amount. New notes refresh while settling. Added 25/50/100
+  percent controls; 100 percent uses 95 percent of spendable funds, rounded down,
+  leaving a shielded buffer. Public STRK is still needed to pay actual fees.
+- Validation: 21 desktop tests, both SDK/Rust pipelines, full Rust workspace,
+  strict clippy, frontend and native builds passed. Verified a wallet-size UI
+  preview using synthetic funds; those preview clicks do not spend mainnet funds.
+- During implementation the installed one-click build recorded accepted recipient
+  registration and shielding. The complete transfer/withdrawal round trip remains
+  unverified. Independent security-review gates remain open.
+
 ## 2026-09-29 — Install and publish the one-click build
 
 - Installed the rebuilt native app and verified that visible account controls

@@ -11,3 +11,12 @@ export function formatStrk(value: string): string {
   const visible=fraction.slice(0,8).replace(/0+$/,"");
   return `${whole}${visible?"."+visible:""}${fraction.slice(8).match(/[1-9]/)?"…":""}`;
 }
+
+// Floor in base units; the 100% shortcut deliberately leaves a 5% buffer.
+export function percentStrk(spendable: string, percent: 25 | 50 | 100): string {
+  const balance=BigInt(spendable);
+  if(balance<0n||balance>=1n<<128n)throw new Error("Invalid spendable balance.");
+  const amount=balance*BigInt(percent===100?95:percent)/100n;
+  const fraction=(amount%10n**18n).toString().padStart(18,"0").replace(/0+$/,"");
+  return `${amount/10n**18n}${fraction?"."+fraction:""}`;
+}

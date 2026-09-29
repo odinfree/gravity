@@ -2,7 +2,7 @@
 // The companion's own UI talks to the core over IPC; external agents/apps use
 // the loopback JSON-RPC service instead.
 
-import { invoke } from "@tauri-apps/api/core";
+import { invoke, Channel } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 
 export interface Status {
@@ -139,6 +139,7 @@ export interface PrivacyReview {
   account: string; chain_id: string; pool_fee: string; max_network_fee: string;
   proof_base: number; screening_attached: boolean; screening_policy: string; adapter: string; warnings: string[];
 }
+export type PrivacyProgressStage = "preparing" | "proving" | "checking_fees" | "submitting";
 export interface PrivacySubmission { transaction_hash: string; status: string; chain_id: string }
 export interface PrivacyReceipt {
   transaction_hash: string; execution_status: string | null; finality_status: string | null;
@@ -150,7 +151,11 @@ export const api = {
   setPrivacySettings: (settings: PrivacySettings) => invoke<void>("set_privacy_settings", { settings }),
   privacyStatus: (request: PrivacyRequest) => invoke<PrivacyStatus>("privacy_run", { request }),
   privacyPrepare: (request: PrivacyRequest) => invoke<PrivacyReview>("privacy_run", { request }),
-  privacyExecute: (request: PrivacyRequest, limits: {max_pool_fee:string;max_network_fee:string}) => invoke<PrivacySubmission>("privacy_execute", { request, limits }),
+  privacyExecute: (request: PrivacyRequest, limits: {max_pool_fee:string;max_network_fee:string}, onProgress: (stage:PrivacyProgressStage)=>void) => {
+    const onProgressChannel=new Channel<PrivacyProgressStage>();
+    onProgressChannel.onmessage=onProgress;
+    return invoke<PrivacySubmission>("privacy_execute", {request,limits,onProgress:onProgressChannel});
+  },
   privacySubmit: (reviewId: string) => invoke<PrivacySubmission>("privacy_submit", { reviewId }),
   privacyReceipt: (transactionHash: string, chainId: string) => invoke<PrivacyReceipt>("privacy_receipt", { transactionHash, chainId }),
   privacyHistory: (account: string, chainId: string) => invoke<PrivacySubmission[]>("privacy_history", { account, chainId }),

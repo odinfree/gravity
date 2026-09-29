@@ -140,9 +140,10 @@ async fn privacy_submit(state: State<'_, DesktopState>, review_id:String) -> Res
     wallet_rpc::privacy::submit(&state.server,"desktop",None,&review_id).await.map_err(|e|e.to_string())
 }
 #[tauri::command]
-async fn privacy_execute(state: State<'_, DesktopState>, request: wallet_rpc::privacy::Request, limits: wallet_rpc::privacy::DesktopLimits) -> Result<serde_json::Value,String> {
+async fn privacy_execute(state: State<'_, DesktopState>, request: wallet_rpc::privacy::Request, limits: wallet_rpc::privacy::DesktopLimits, on_progress: tauri::ipc::Channel<wallet_rpc::privacy::ProgressStage>) -> Result<serde_json::Value,String> {
     state.server.touch_activity();
-    wallet_rpc::privacy::execute_desktop(&state.server,request,limits).await.map_err(|e|e.to_string())
+    let progress = move |stage| { let _ = on_progress.send(stage); };
+    wallet_rpc::privacy::execute_desktop_with_progress(&state.server,request,limits,Some(&progress)).await.map_err(|e|e.to_string())
 }
 #[tauri::command]
 async fn privacy_receipt(state: State<'_, DesktopState>, transaction_hash:String, chain_id:String) -> Result<serde_json::Value,String> {

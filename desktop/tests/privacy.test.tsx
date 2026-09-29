@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {act} from 'react';
 import {createRoot,type Root} from 'react-dom/client';
 import {Privacy} from '../src/components/Privacy';
-import {parseStrk} from '../src/privacy-amount';
+import {parseStrk,percentStrk} from '../src/privacy-amount';
 import {api,calls} from './privacy-mock-api';
 let root:Root,host:HTMLDivElement;
 const original={...api};
@@ -96,4 +96,53 @@ test('a failed prover save retains the previous selection and never submits',asy
   assert.equal((host.querySelector('input[name="privacy-deposit-prover"][value="configured"]') as HTMLInputElement).checked,true);
   assert.match(host.querySelector('[role="alert"]')!.textContent!,/Could not save/);
   assert.ok(!calls.some(c=>c.method==='submit'||c.method==='execute'));
+});
+
+test('progress is immediate, follows real stages, and waits for a successful receipt',async()=>{
+  let stage!: (value:"preparing"|"proving"|"checking_fees"|"submitting")=>void;
+  let finish!: (value:any)=>void;
+  let confirm!: (value:any)=>void;
+  api.privacyExecute=(_request,_limits,onProgress)=>{stage=onProgress!;return new Promise(resolve=>{finish=resolve;});};
+  api.privacyReceipt=()=>new Promise(resolve=>{confirm=resolve;});
+  await click('Shield STRK');
+  assert.match(host.querySelector('[aria-label="Transaction progress"]')!.textContent!,/Preparing transaction/);
+  assert.ok(button('Preparing…').disabled);
+  await act(async()=>stage('proving'));
+  assert.match(host.querySelector('[role="progressbar"]')!.getAttribute('aria-valuetext')!,/Generating proof/);
+  assert.equal(host.querySelector('[role="progressbar"]')!.getAttribute('aria-valuenow'),null,'no invented percentage');
+  await act(async()=>stage('checking_fees'));
+  assert.match(host.textContent!,/Checking proof and fees/);
+  await act(async()=>stage('submitting'));
+  assert.match(host.textContent!,/Submitting transaction/);
+  await act(async()=>finish({transaction_hash:'0xabc',status:'submission_unknown',chain_id:'0x534e5f4d41494e'}));
+  assert.match(host.querySelector('[aria-label="Transaction progress"]')!.textContent!,/Waiting for confirmation/);
+  assert.ok(!host.textContent!.includes('Transaction confirmed'));
+  await act(async()=>stage('proving')); // Late channel message must not regress confirmation.
+  assert.match(host.querySelector('[aria-label="Transaction progress"]')!.textContent!,/Waiting for confirmation/);
+  await act(async()=>confirm(await original.privacyReceipt()));
+  assert.match(host.querySelector('[aria-label="Transaction progress"]')!.textContent!,/Transaction confirmed/);
+});
+test('unshield discovers and displays funds; percentage buttons use spendable notes and preserve 5 percent',async()=>{
+  await act(async()=>{(host.querySelector('input[name="privacy-operation"][value="withdraw"]') as HTMLInputElement).click();});
+  assert.ok(calls.some(c=>c.method==='status'&&c.value.mode==='balances'));
+  assert.match(host.querySelector('[aria-label="Available shielded funds"]')!.textContent!,/Available to unshield80 STRK/);
+  const amount=host.querySelector('#privacy-amount') as HTMLInputElement;
+  await click('25%');assert.equal(amount.value,'20');
+  await click('50%');assert.equal(amount.value,'40');
+  await click('100%');assert.equal(amount.value,'76');
+  assert.ok(!calls.some(c=>c.method==='execute'),'choosing an amount never spends');
+  await click('Unshield');
+  assert.equal(calls.find(c=>c.method==='execute')!.value.amount,'76000000000000000000');
+});
+test('percentage arithmetic floors base units without rounding up or losing precision',()=>{
+  assert.equal(percentStrk('1000000000000000001',100),'0.95');
+  assert.equal(percentStrk('99999999999999999999999',25),'24999.999999999999999999');
+  assert.equal(percentStrk('0',100),'0');
+});
+test('unavailable shielded discovery disables percentage shortcuts instead of inventing a balance',async()=>{
+  api.privacyStatus=async(value)=>{if(value.mode==='balances')throw new Error('Discovery unavailable');return original.privacyStatus(value);};
+  await act(async()=>{(host.querySelector('input[name="privacy-operation"][value="withdraw"]') as HTMLInputElement).click();});
+  assert.ok(button('25%').disabled);assert.ok(button('50%').disabled);assert.ok(button('100%').disabled);
+  assert.ok(button('Unshield').disabled);
+  assert.match(host.textContent!,/Shielded balance unavailable/);
 });
