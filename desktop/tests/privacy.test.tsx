@@ -44,7 +44,7 @@ test('a confirmed receipt remains final when discovery fails',async()=>{
 });
 test('unverified screening is never labelled ready',()=>{
   assert.match(host.textContent!,/Screening not verified/);
-  assert.match(host.textContent!,/Screening access is not included with gravity yet/);
+  assert.match(host.textContent!,/operator-issued access/);
 });
 test('rejecting the wallet approval never claims a transaction was accepted',async()=>{
   api.privacySubmit=async()=>{throw new Error('User refused');};
@@ -63,4 +63,36 @@ test('service settings still have a Back path that never submits',async()=>{
 test('STRK input preserves base-unit precision and rejects exponent notation',()=>{
   assert.equal(parseStrk('10.000000000000000001'),'10000000000000000001');
   for(const value of ['0','-10','1e18','NaN','0.0000000000000000001'])assert.throws(()=>parseStrk(value));
+});
+test('hosted quota stops shielding while transfers remain available',async()=>{
+  await act(async()=>{root.unmount();});
+  api.privacySettings=async()=>{const value=await original.privacySettings();return {...value,settings:{...value.settings,mainnet:{...value.settings.mainnet,deposit_prover:'starkscan'}}};};
+  api.privacyStatus=async(value)=>({...await original.privacyStatus(value),hosted_prover:{reachable:true,local_attempts:10,local_limit:10,local_remaining:0,retry_after_seconds:0,pending:[]}});
+  root=createRoot(host);await act(async()=>{root.render(<Privacy status={{network:'SN_MAIN'} as any}/>);});
+  assert.match(host.textContent!,/Hosted attempts today: 10 \/ 10 across local clients/);
+  assert.ok(button('Shielding unavailable').disabled);
+  await act(async()=>{const select=host.querySelector('#privacy-operation') as HTMLSelectElement;select.value='transfer';select.dispatchEvent(new Event('change',{bubbles:true}));});
+  assert.ok(!button('Private transfer').disabled);
+});
+test('hosted selection is explicit and has no credential field',async()=>{
+  await click('Privacy services');
+  const select=host.querySelector('#privacy-deposit-prover') as HTMLSelectElement;
+  assert.equal(select.value,'configured');
+  await act(async()=>{select.value='starkscan';select.dispatchEvent(new Event('change',{bubbles:true}));});
+  assert.match(host.textContent!,/Starkscan receives the deposit’s private proving inputs/);
+  assert.equal(host.querySelector('input[type="password"]'),null);
+  await click('Save privacy services');
+  assert.equal(calls.find(c=>c.method==='settings')!.value.mainnet.deposit_prover,'starkscan');
+  assert.ok(!calls.some(c=>c.method==='prepare'));
+});
+test('Back restores the saved prover choice rather than applying an unsaved route',async()=>{
+  await click('Privacy services');
+  const select=host.querySelector('#privacy-deposit-prover') as HTMLSelectElement;
+  await act(async()=>{select.value='starkscan';select.dispatchEvent(new Event('change',{bubbles:true}));});
+  await click('Back');
+  assert.ok(!host.textContent?.includes('Starkscan adapter is not running'));
+  assert.ok(!button('Shield STRK').disabled);
+  assert.ok(!calls.some(c=>c.method==='settings'));
+  await click('Privacy services');
+  assert.equal((host.querySelector('#privacy-deposit-prover') as HTMLSelectElement).value,'configured');
 });

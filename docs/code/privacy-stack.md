@@ -29,6 +29,7 @@ Credentials are IPC-only and are not exposed by `GET /` or agent methods.
 | Blockchain RPC | Chain reads, final public-call estimation and submission |
 | `starknet-rpc` prover | Your Starknet transaction prover, often `http://127.0.0.1:3000` through SSH |
 | Discovery endpoint | Your compatible indexer, often `http://127.0.0.1:8080` |
+| Shielding prover | Configured prover, or the shared Starkscan deposit adapter on loopback port 3001 |
 | Pool address | The deployed pool for the selected network and adapter |
 | `required` policy | Deposit preparation requires the prover's screening attestation |
 | `pool_enforced` policy | Custom compatible deployment; its contract enforces its policy, no blanket attestation assumption |
@@ -38,13 +39,16 @@ attempt to disable that policy. A local policy setting cannot change a contract'
 rules. Other compliance protocols, attestation schemas, allowlists or verifiers
 need explicit implementation and review.
 
-The default pool does not currently offer out-of-the-box shielding through
-gravity. Its screening integration is an outstanding wallet/operator dependency;
-end users should not be asked to obtain partner credentials. The official
+The default pool needs authorized screening access. gravity includes an optional
+[Starkscan screened-deposit adapter](starkscan-screening.md); access is an
+operator dependency and is not bundled. A live hosted deposit remains unverified.
+The official
 [proof interceptor](https://github.com/starkware-libs/starknet-privacy/blob/main/proof-interceptor/README.md)
 needs a screening URL and operator-issued partner credentials. Running the
 interceptor without them, or checking its health endpoint, does not supply an
 attestation. gravity does not route private inputs to an unconfigured service.
+Starkscan is an explicit mainnet deposit-only selection; other operations retain
+the self-hosted prover. The adapter owns the private API key and shared quota.
 
 `deposit_screening` reports `unverified`, `signature_missing` or `pool_enforced`.
 After a deposit proof lacks its required signature, a private diagnostic remembers
@@ -120,6 +124,9 @@ configuration-bound review with a five-minute lifetime. Final spending always
 requests human approval, even under a generic permission grant. Rust checks the
 exact STRK allowance (pool fee plus deposit, or only the fee for other actions),
 review metadata, nonce, current pool fee, proof age and resource-bound cap.
+Screened deposits also require a valid issue timestamp with at least 60 seconds
+of inclusion margin inside the current five-minute attestation window. This is
+rechecked after approval and against the latest block timestamp before signing.
 
 A review is consumed once. Before the one permitted broadcast, gravity stores the
 deterministically calculated transaction hash in an owner-only journal. Transport

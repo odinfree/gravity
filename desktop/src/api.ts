@@ -116,7 +116,10 @@ export interface ProofRecord {
   error?: string;
 }
 
-export interface PrivacyNetwork { pool_address: string; discovery_url: string; screening_policy: "required" | "pool_enforced" }
+export interface PrivacyNetwork {
+  pool_address: string; discovery_url: string; screening_policy: "required" | "pool_enforced";
+  deposit_prover?: "configured" | "starkscan";
+}
 export interface PrivacySettings { mainnet: PrivacyNetwork; testnet: PrivacyNetwork }
 export interface PrivacyRequest {
   account: string; chain_id: string; mode: "status" | "balances" | "prepare";
@@ -126,6 +129,10 @@ export interface PrivacyStatus {
   registered: boolean; registration_mature: boolean; public_balance: string; pool_fee: string; proof_base: number;
   shielded_balance?: string; spendable_balance?: string; notes?: number;
   deposit_screening?: "unverified" | "signature_missing" | "pool_enforced";
+  hosted_prover?: {
+    reachable: boolean; local_attempts?: number; local_limit?: number; local_remaining?: number;
+    resets_at?: string; retry_after_seconds?: number; pending?: {job_id: string | null; status: string}[];
+  };
 }
 export interface PrivacyReview {
   review_id: string; operation: string; amount: string; recipient: string;

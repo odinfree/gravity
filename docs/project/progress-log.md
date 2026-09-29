@@ -8,6 +8,32 @@ Use the [entry template](#entry-template) at the bottom for every new entry.
 
 ---
 
+## 2026-09-29 — Shared Starkscan screened-deposit adapter
+
+- Added a loopback-only JSON-RPC adapter for the documented asynchronous hosted
+  REST prover. Its fixed upstream, private credential loading, shared local
+  ten-attempt UTC limit and persisted idempotency keys serve multiple clients.
+  SQLite stores first-delivered results before returning them, including the
+  screening signature; private request calldata and the API key are not stored.
+- Added an explicit mainnet shielding choice in gravity. Registration, transfers,
+  withdrawals and discovery retain their existing services. The UI reports local
+  shared usage without claiming it knows the server's remaining budget. Known
+  unresolved delivery stops new requests; no automated replacement proof is sent.
+- Bound the attestation timestamp to the actual prover callback and check it
+  before review, after approval and against the chain clock before final signing.
+  Reserve an inclusion margin. This does not guarantee timely chain inclusion.
+- Linked official discovery, prover, RPC, limits, retry and privacy-data contracts
+  in the new integration guide. Public indexed privacy facts are not used as
+  wallet note discovery. API entitlement does not establish relay availability.
+- Validation: 9 relay tests, 5 Rust privacy tests and 17 desktop tests passed;
+  Rust build, strict workspace clippy and frontend production build passed.
+  The unsigned Apple Silicon app bundle builds; it has not replaced the installed app.
+  Existing and new socket-based integration runs cannot complete in this session:
+  sandbox denies loopback bind with EPERM. External API/GitHub access is also
+  unavailable. No live proof, approval, broadcast, installation or publication
+  is claimed. Existing independent wallet/crypto audit gate remains blocked;
+  the added hosted trust boundary also requires security review.
+
 ## 2026-09-27 — Honest shielding availability and independent balance refresh
 
 - Confirmed from the official screening integration documentation that the

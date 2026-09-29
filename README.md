@@ -17,10 +17,11 @@ its wallet core, agent pairing, approval flow and proving infrastructure. Privac
 actions use the [Starknet privacy SDK](https://github.com/starkware-libs/starknet-privacy/tree/main/sdk).
 It is a complete wallet repository, independent of any skills collection.
 
-**Direct shielding into the default screened pool is not available out of the
-box yet.** gravity still needs a pool-authorized screening integration. This is a
-wallet/operator dependency, not something end users should have to configure.
-Registration is live-verified; the full shield → transfer → withdraw flow is not.
+**Screened deposits require operator-issued access.** gravity includes a
+[Starkscan deposit adapter](docs/code/starkscan-screening.md) with a shared local
+daily limit; no credential or entitlement is bundled. Other operations retain
+your own prover. Registration is live-verified; the hosted shield → transfer →
+withdraw flow is not yet live-verified.
 
 ## What is implemented
 
@@ -28,6 +29,8 @@ Registration is live-verified; the full shield → transfer → withdraw flow is
 - Desktop **Privacy** tab: register, check balances, shield, transfer, unshield,
   review amount and fees, and reconcile transaction receipts.
 - Your own Starknet transaction prover over HTTPS or a loopback SSH tunnel.
+- Optional Starkscan hosted proving for screened mainnet deposits, with shared
+  quota accounting, result recovery and expiring-attestation checks.
 - A separate discovery service, with its address kept in local settings.
 - Pool policy profiles: screening required, or contract-enforced policy for
   custom compatible pools. The known STRK20 deployments require screening.
@@ -85,6 +88,9 @@ prover health and registration are never treated as screening authorization.
 The [official screening sidecar](https://github.com/starkware-libs/starknet-privacy/blob/main/proof-interceptor/README.md)
 requires credentials issued by its screening operator. This repository does not
 include those credentials or an authorized public screening service.
+Alternatively, operators with Starkscan `prove` access can run the
+[shared deposit adapter](docs/code/starkscan-screening.md) and select it in
+Privacy services. A successful local health check is not proof of hosted access.
 
 [Complete privacy guide](docs/code/privacy-stack.md) ·
 [Self-hosted prover setup](docs/code/self-hosted-prover.md) ·

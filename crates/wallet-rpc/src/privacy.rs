@@ -20,6 +20,7 @@ use wallet_core::{AccountRef, ChainId, Felt, InvokeV3Params};
 const MAIN_POOL: &str = "0x040337b1af3c663e86e333bab5a4b28da8d4652a15a69beee2b677776ffe812a";
 const TEST_POOL: &str = "0x0254a6b2997ef52e9f830ce1f543f6b29768295e8d17e2267d672c552cfe0d91";
 const FRAME_LIMIT: usize = 32 * 1024 * 1024;
+const SCREENED_RELAY: &str = "http://127.0.0.1:3001";
 fn err(s: &str) -> WalletRpcError {
     WalletRpcError::Precondition(s.into())
 }
@@ -57,6 +58,13 @@ pub enum ScreeningPolicy {
     Required,
     PoolEnforced,
 }
+#[derive(Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum DepositProver {
+    #[default]
+    Configured,
+    Starkscan,
+}
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct NetworkSettings {
@@ -64,6 +72,8 @@ pub struct NetworkSettings {
     pub discovery_url: String,
     #[serde(default)]
     pub screening_policy: ScreeningPolicy,
+    #[serde(default)]
+    pub deposit_prover: DepositProver,
 }
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -78,17 +88,27 @@ impl Default for Settings {
                 pool_address: MAIN_POOL.into(),
                 discovery_url: "http://127.0.0.1:8080".into(),
                 screening_policy: ScreeningPolicy::Required,
+                deposit_prover: DepositProver::Configured,
             },
             testnet: NetworkSettings {
                 pool_address: TEST_POOL.into(),
                 discovery_url: String::new(),
                 screening_policy: ScreeningPolicy::Required,
+                deposit_prover: DepositProver::Configured,
             },
         }
     }
 }
 impl Settings {
     pub fn validate(&self) -> Result<(), WalletRpcError> {
+        if self.testnet.deposit_prover == DepositProver::Starkscan
+            || (self.mainnet.deposit_prover == DepositProver::Starkscan
+                && felt(&self.mainnet.pool_address)? != felt(MAIN_POOL)?)
+        {
+            return Err(err(
+                "Starkscan shielding supports the current mainnet STRK20 pool only",
+            ));
+        }
         for n in [&self.mainnet, &self.testnet] {
             if n.screening_policy != ScreeningPolicy::Required
                 && [felt(MAIN_POOL)?, felt(TEST_POOL)?].contains(&felt(&n.pool_address)?)
@@ -312,7 +332,8 @@ async fn configuration(state: &ServerState, chain: ChainId) -> Result<Value, Wal
     validate_endpoint(&private.discovery_url)?;
     Ok(
         json!({"rpc_url":net.rpc_url,"prover_url":net.prover_url,"discovery_url":private.discovery_url,
-        "adapter":"strk20-v2", "screening_policy":private.screening_policy, "pool_address":private.pool_address,"chain_id":fh(&chain.as_felt())}),
+        "adapter":"strk20-v2", "screening_policy":private.screening_policy, "deposit_prover":private.deposit_prover,
+        "pool_address":private.pool_address,"chain_id":fh(&chain.as_felt())}),
     )
 }
 
@@ -352,6 +373,24 @@ pub async fn run(
     let account = account(state, scope, &req.account).await?;
     let chain = req.chain()?;
     let config = configuration(state, chain).await?;
+    if uses_starkscan(&req, &config) {
+        let relay = relay_status().await;
+        if relay["reachable"] != true {
+            return Err(err(
+                "Start the shared Starkscan deposit adapter on 127.0.0.1:3001 before shielding",
+            ));
+        }
+        if relay["local_remaining"] == 0 {
+            return Err(err(
+                "The shared hosted-proving allowance is exhausted for this UTC day",
+            ));
+        }
+        if relay["retry_after_seconds"].as_u64().unwrap_or(0) > 0
+            || relay["pending"].as_array().is_some_and(|a| !a.is_empty())
+        {
+            return Err(err("A hosted proof is unresolved or Starkscan requested backoff. Check the shared relay status before shielding again"));
+        }
+    }
     if req.mode == "prepare" {
         let records = history(state, scope, &account.address, chain).await?;
         if records.iter().any(|v| {
@@ -405,9 +444,13 @@ pub async fn run(
     }
     if req.mode != "prepare" {
         result["deposit_screening"] = json!(privacy.deposit_screening(&config));
+        if config["deposit_prover"] == "starkscan" {
+            result["hosted_prover"] = relay_status().await;
+        }
         return Ok(result);
     }
     validate_prepared(&req, &config, &result)?;
+    screening_fresh(&req, &result, crate::now_unix_ms() / 1000)?;
     if req.operation == "deposit" {
         privacy.observe_screening(&config, false)?;
     }
@@ -453,6 +496,7 @@ fn review(id: &str, result: &Value) -> Value {
         "chain_id",
         "warnings",
         "screening_attached",
+        "screening_issued_at",
         "screening_policy",
         "adapter",
     ] {
@@ -648,6 +692,7 @@ async fn worker(
     let process = async {
         let mut expected_tx: Option<Value> = None;
         let mut proved = false;
+        let mut screening_issued_at = Value::Null;
         loop {
             let frame = read_frame(&mut stdout).await?;
             match frame["kind"].as_str() {
@@ -739,30 +784,36 @@ async fn worker(
                     let base = frame["payload"]["block_number"]
                         .as_u64()
                         .ok_or_else(|| err("Missing proof base"))?;
-                    let prover = state.prover.as_ref().ok_or_else(|| err("No prover"))?;
-                    let job = prover::enqueue_prove(
-                        prover,
-                        json!({"transaction":tx,"block_number":base}),
-                        Some("STRK20 pool operation".into()),
-                        match chain {
-                            ChainId::Mainnet => "mainnet",
-                            ChainId::Sepolia => "testnet",
-                        }
-                        .into(),
-                    )
-                    .await;
-                    let result = loop {
-                        let job = prover
-                            .jobs
-                            .get(&job)
-                            .await
-                            .ok_or_else(|| err("Proof job disappeared"))?;
-                        match job.status{
+                    let result = if uses_starkscan(request, config) {
+                        screened_proof(tx, base).await?
+                    } else {
+                        let prover = state.prover.as_ref().ok_or_else(|| err("No prover"))?;
+                        let job = prover::enqueue_prove(
+                            prover,
+                            json!({"transaction":tx,"block_number":base}),
+                            Some("STRK20 pool operation".into()),
+                            match chain {
+                                ChainId::Mainnet => "mainnet",
+                                ChainId::Sepolia => "testnet",
+                            }
+                            .into(),
+                        )
+                        .await;
+                        loop {
+                            let job = prover
+                                .jobs
+                                .get(&job)
+                                .await
+                                .ok_or_else(|| err("Proof job disappeared"))?;
+                            match job.status{
                             prover::JobStatus::Succeeded=>break job.result.ok_or_else(||err("Missing proof"))?,
                             prover::JobStatus::Failed=>return Err(err("Pool proving failed. Check your prover and screening service; private error details withheld.")),
                             _=>tokio::time::sleep(Duration::from_millis(500)).await,
                         }
+                        }
                     };
+                    screening_issued_at =
+                        result["additional_data"]["signature"]["issued_at"].clone();
                     proved = true;
                     stdin
                         .write_all(
@@ -776,7 +827,9 @@ async fn worker(
                     if request.mode == "prepare" && !proved {
                         return Err(err("Privacy result has no completed proof"));
                     }
-                    return Ok(frame["result"].clone());
+                    let mut result = frame["result"].clone();
+                    result["screening_issued_at"] = screening_issued_at;
+                    return Ok(result);
                 }
                 Some("error") => {
                     // Accept only known codes; never forward arbitrary child errors or inputs.
@@ -904,6 +957,11 @@ pub async fn submit(
         return Err(err("Privacy configuration changed; prepare again"));
     }
     validate_prepared(&prepared.request, &config, &prepared.result)?;
+    screening_fresh(
+        &prepared.request,
+        &prepared.result,
+        crate::now_unix_ms() / 1000,
+    )?;
     let r = &prepared.result;
     let summary=format!("{} {} STRK on {}. From {}. Recipient {}. Pool fee {} STRK; maximum network fee {} STRK. Deposits/withdrawals and this submitting account remain public.",
         prepared.request.operation,strk(integer(r["amount"].as_str().ok_or_else(||err("Missing amount"))?)?),prepared.request.chain_id,prepared.account.address,r["recipient"].as_str().unwrap_or("self"),
@@ -932,6 +990,11 @@ pub async fn submit(
             "Privacy configuration changed during approval; prepare again",
         ));
     }
+    screening_fresh(
+        &prepared.request,
+        &prepared.result,
+        crate::now_unix_ms() / 1000,
+    )?;
     let rpc_url = config["rpc_url"]
         .as_str()
         .ok_or_else(|| err("Missing RPC"))?;
@@ -983,6 +1046,23 @@ pub async fn submit(
         return Err(err("Account changed after review; prepare again"));
     }
     let calls = dispatch::parse_calls(r)?;
+    screening_fresh(&prepared.request, r, crate::now_unix_ms() / 1000)?;
+    if prepared.request.operation == "deposit" && r["screening_attached"] == true {
+        let block = node_read(
+            rpc_url,
+            "starknet_getBlockWithTxHashes",
+            json!({"block_id":"latest"}),
+        )
+        .await?;
+        let timestamp = block["timestamp"]
+            .as_u64()
+            .ok_or_else(|| err("Cannot verify screening against the chain clock"))?;
+        screening_fresh(
+            &prepared.request,
+            r,
+            timestamp.max(crate::now_unix_ms() / 1000),
+        )?;
+    }
     let bounds = dispatch::opt_fee_bounds(r)?.ok_or_else(|| err("Missing bounds"))?;
     let proof_facts = r["proof_facts"]
         .as_array()
@@ -1116,6 +1196,100 @@ pub async fn history(
     Ok(records)
 }
 
+fn uses_starkscan(request: &Request, config: &Value) -> bool {
+    request.mode == "prepare"
+        && request.operation == "deposit"
+        && config["deposit_prover"] == "starkscan"
+        && config["chain_id"] == "0x534e5f4d41494e"
+}
+
+fn screening_fresh(request: &Request, result: &Value, now: u64) -> Result<(), WalletRpcError> {
+    if request.operation != "deposit" || result["screening_attached"] != true {
+        return Ok(());
+    }
+    let value = &result["screening_issued_at"];
+    let issued = value
+        .as_u64()
+        .or_else(|| {
+            value
+                .as_str()
+                .and_then(|s| integer(s).ok())
+                .and_then(|v| u64::try_from(v).ok())
+        })
+        .ok_or_else(|| err("Missing screening issue time; prepare again"))?;
+    // The current pool allows 300 seconds. Reserve 60 for broadcast/inclusion.
+    if issued == 0 || issued > now.saturating_add(30) || issued.saturating_add(240) <= now {
+        return Err(err("Screening expired or has too little time remaining. Nothing was submitted; prepare a fresh deposit"));
+    }
+    Ok(())
+}
+
+async fn relay_status() -> Value {
+    match node_read(SCREENED_RELAY, "gravity_relayStatus", json!([])).await {
+        Ok(value)
+            if value["service"] == "gravity-starkscan-relay"
+                && value["chain_id"] == "0x534e5f4d41494e" =>
+        {
+            json!({"reachable":true,"local_attempts":value["local_attempts"],
+                "local_limit":value["local_limit"],"local_remaining":value["local_remaining"],
+                "resets_at":value["resets_at"],"retry_after_seconds":value["retry_after_seconds"],
+                "pending":value["pending"]})
+        }
+        _ => json!({"reachable":false}),
+    }
+}
+
+// The shared adapter owns the credential, quota and one-shot result persistence.
+// No hosted API key crosses the frontend, SDK child, or companion RPC boundary.
+async fn screened_proof(tx: &Value, block: u64) -> Result<Value, WalletRpcError> {
+    let client = reqwest::Client::builder()
+        .no_proxy()
+        .redirect(reqwest::redirect::Policy::none())
+        .timeout(Duration::from_secs(930))
+        .build()
+        .map_err(|_| err("Cannot initialize deposit prover"))?;
+    let mut response = client.post(SCREENED_RELAY)
+        .json(&json!({"jsonrpc":"2.0","id":1,"method":"starknet_proveTransaction",
+            "params":{"block_id":{"block_number":block},"transaction":tx}}))
+        .send().await.map_err(|_| err("Deposit prover disconnected. Check the shared relay status before trying another proof"))?;
+    if !response.status().is_success() {
+        return Err(err("The shared deposit prover returned an HTTP error"));
+    }
+    let mut bytes = Vec::new();
+    while let Some(chunk) = response
+        .chunk()
+        .await
+        .map_err(|_| err("Deposit proof response interrupted"))?
+    {
+        if bytes.len().saturating_add(chunk.len()) > FRAME_LIMIT {
+            return Err(err("Deposit proof response too large"));
+        }
+        bytes.extend_from_slice(&chunk);
+    }
+    let body: Value =
+        serde_json::from_slice(&bytes).map_err(|_| err("Invalid deposit prover response"))?;
+    if body["id"] != 1 || body["jsonrpc"] != "2.0" {
+        return Err(err("Invalid deposit prover envelope"));
+    }
+    if body.get("error").is_some() {
+        return Err(err(match body["error"]["code"].as_i64() {
+            Some(-32060) => "Starkscan has not enabled the hosted prover endpoint",
+            Some(-32061) => "Starkscan rejected the key or its prove scope",
+            Some(-32062) => "The hosted proving allowance is exhausted for this UTC day",
+            Some(-32063) => "Another hosted proof is unresolved or the relay is backing off",
+            Some(-32064) => "Hosted proof delivery is uncertain. Contact Starkscan using the job ID in the shared relay status; do not resubmit",
+            Some(-32065) => "Hosted proof is still pending or interrupted. Check the shared relay status before preparing another",
+            Some(-32066) => "Screening is missing or too close to expiry. Nothing was submitted",
+            Some(-32067) => "Starkscan rejected the proof. Private diagnostics are in the relay's local storage",
+            Some(-32068) => "Starkscan proving is unavailable. Check the shared relay before trying again",
+            _ => "The deposit prover failed; private details withheld",
+        }));
+    }
+    body.get("result")
+        .cloned()
+        .ok_or_else(|| err("Missing screened proof"))
+}
+
 async fn node_read(url: &str, method: &str, params: Value) -> Result<Value, WalletRpcError> {
     let client = reqwest::Client::builder()
         .no_proxy()
@@ -1182,6 +1356,50 @@ pub fn attach(state: ServerState, path: PathBuf, worker: PathBuf) -> ServerState
 #[cfg(test)]
 mod tests {
     use super::*;
+    fn request(operation: &str) -> Request {
+        Request {
+            account: "0x123".into(),
+            chain_id: "0x534e5f4d41494e".into(),
+            mode: "prepare".into(),
+            operation: operation.into(),
+            amount: "10".into(),
+            recipient: "0x456".into(),
+        }
+    }
+    #[test]
+    fn starkscan_is_deposit_only_and_mainnet_only() {
+        let config = json!({"deposit_prover":"starkscan","chain_id":"0x534e5f4d41494e"});
+        assert!(uses_starkscan(&request("deposit"), &config));
+        for op in ["register", "transfer", "withdraw"] {
+            assert!(!uses_starkscan(&request(op), &config));
+        }
+        let mut read = request("deposit");
+        read.mode = "balances".into();
+        assert!(!uses_starkscan(&read, &config));
+        let mut settings = Settings::default();
+        settings.testnet.deposit_prover = DepositProver::Starkscan;
+        assert!(settings.validate().is_err());
+        settings.testnet.deposit_prover = DepositProver::Configured;
+        settings.mainnet.deposit_prover = DepositProver::Starkscan;
+        assert!(settings.validate().is_ok());
+        settings.mainnet.pool_address = "0x123".into();
+        assert!(settings.validate().is_err());
+    }
+    #[test]
+    fn screening_must_still_have_inclusion_margin_after_approval() {
+        let r = json!({"screening_attached":true,"screening_issued_at":1000});
+        assert!(screening_fresh(&request("deposit"), &r, 1000).is_ok());
+        assert!(screening_fresh(&request("deposit"), &r, 1239).is_ok());
+        assert!(screening_fresh(&request("deposit"), &r, 1240).is_err());
+        assert!(screening_fresh(&request("deposit"), &r, 969).is_err());
+        assert!(screening_fresh(
+            &request("deposit"),
+            &json!({"screening_attached":true}),
+            1000
+        )
+        .is_err());
+        assert!(screening_fresh(&request("transfer"), &r, 1240).is_ok());
+    }
     #[tokio::test]
     async fn screening_observation_is_persistent_and_configuration_bound() {
         let mut random = [0u8; 16];
@@ -1193,7 +1411,7 @@ mod tests {
         state.observe_screening(&config, true).unwrap();
         let restarted = PrivacyState::new(path.clone(), PathBuf::new(), PathBuf::new());
         assert_eq!(restarted.deposit_screening(&config), "signature_missing");
-        for field in ["pool_address", "prover_url", "chain_id"] {
+        for field in ["pool_address", "prover_url", "chain_id", "deposit_prover"] {
             let mut changed = config.clone();
             changed[field] = json!("changed");
             assert_eq!(restarted.deposit_screening(&changed), "unverified");

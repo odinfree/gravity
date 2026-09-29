@@ -82,6 +82,10 @@ export function Privacy({status}: {status: Status}) {
     await api.setPrivacySettings(settings);
     if(epoch===generation.current){setEditing(false);setData(null);setReview(null);}
   });}
+  function cancelSettings(){return task("Restoring privacy services…",async epoch=>{
+    const current=await api.privacySettings();
+    if(epoch===generation.current){setSettings(current.settings);setEditing(false);}
+  });}
   // Check registration automatically on account/network changes and after service edits.
   useEffect(()=>{
     if(!selected||!runtime||editing)return;
@@ -129,9 +133,12 @@ export function Privacy({status}: {status: Status}) {
   const accepted=receipt?.execution_status==="SUCCEEDED"&&["ACCEPTED_ON_L2","ACCEPTED_ON_L1"].includes(receipt.finality_status??"");
   const screeningMissing=data?.deposit_screening==="signature_missing";
   const screeningRequired=(settings?.[network].screening_policy??"required")==="required";
+  const hosted=settings?.[network].deposit_prover==="starkscan";
+  const relay=data?.hosted_prover;
+  const hostedBlocked=hosted&&(!relay?.reachable||relay.local_remaining===0||Boolean(relay.pending?.length)||Boolean(relay.retry_after_seconds));
   return <section className="panel privacy-panel">
     <div className="privacy-title"><h2>Privacy</h2><span className="badge">{network==="mainnet"?"Mainnet":"Sepolia"}</span></div>
-    <p className="muted small">Starknet privacy, using your own prover. The current adapter supports STRK20-compatible pools and STRK.</p>
+    <p className="muted small">Starknet privacy with your chosen services. The current adapter supports STRK20-compatible pools and STRK.</p>
     <label htmlFor="privacy-account">Account</label>
     <select id="privacy-account" className="input" value={selected} disabled={Boolean(busy)} onChange={e=>setSelected(e.target.value)}>
       {accounts.map(a=><option key={a.address} value={a.address}>{a.label||"Account"} · {a.address.slice(0,10)}…</option>)}
@@ -139,14 +146,15 @@ export function Privacy({status}: {status: Status}) {
     {!accounts.length&&<p className="muted">Create an account in Accounts to get started.</p>}
     {!runtime&&<p className="error">Privacy runtime unavailable. Install Node.js 24+ and build the bundled privacy worker.</p>}
     <div className="privacy-actions"><button className="ghost" disabled={disabled} onClick={()=>refresh(true)}>Refresh balance</button>
-      <button className="ghost" disabled={Boolean(busy)} onClick={()=>{setReview(null);setEditing(!editing);}}>Privacy services</button></div>
+      <button className="ghost" disabled={Boolean(busy)} onClick={()=>{setReview(null);if(editing)void cancelSettings();else setEditing(true);}}>Privacy services</button></div>
     {editing&&settings&&<div className="privacy-card">
       <h3>Services for {network==="mainnet"?"Mainnet":"Sepolia"}</h3>
       <p className="muted small">Use a discovery service you trust: it receives viewing material. The prover and blockchain node use the endpoints in Settings.</p>
       <label htmlFor="privacy-pool">Pool address</label><input id="privacy-pool" className="input" value={settings[network].pool_address} onChange={e=>setSettings({...settings,[network]:{...settings[network],pool_address:e.target.value}})}/>
       <label htmlFor="privacy-policy">Deposit policy</label><select id="privacy-policy" className="input" value={settings[network].screening_policy} onChange={e=>setSettings({...settings,[network]:{...settings[network],screening_policy:e.target.value as "required"|"pool_enforced"}})}><option value="required">Screening attestation required</option><option value="pool_enforced">Custom pool — policy enforced by its contract</option></select><p className="muted small">Changing this setting cannot override a pool’s on-chain rules. Official STRK20 pools require screening.</p>
       <label htmlFor="privacy-discovery">Discovery endpoint</label><input id="privacy-discovery" className="input" placeholder="http://127.0.0.1:8080" value={settings[network].discovery_url} onChange={e=>setSettings({...settings,[network]:{...settings[network],discovery_url:e.target.value}})}/>
-      <div className="privacy-actions"><button className="ghost" disabled={Boolean(busy)} onClick={()=>setEditing(false)}>Back</button><button className="primary" disabled={Boolean(busy)} onClick={save}>Save privacy services</button></div>
+      {network==="mainnet"&&<><label htmlFor="privacy-deposit-prover">Shielding prover</label><select id="privacy-deposit-prover" className="input" value={settings[network].deposit_prover??"configured"} onChange={e=>setSettings({...settings,[network]:{...settings[network],deposit_prover:e.target.value as "configured"|"starkscan"}})}><option value="configured">Use the prover in Settings</option><option value="starkscan">Starkscan — screened mainnet deposits</option></select><p className="muted small">Starkscan receives the deposit’s private proving inputs. The shared local adapter keeps its key outside the wallet and limits hosted attempts to 10 per UTC day. Registration, transfers and withdrawals keep using your configured prover.</p></>}
+      <div className="privacy-actions"><button className="ghost" disabled={Boolean(busy)} onClick={()=>cancelSettings()}>Back</button><button className="primary" disabled={Boolean(busy)} onClick={save}>Save privacy services</button></div>
     </div>}
     {data&&<div className="privacy-card">
       <dl className="privacy-balances"><dt>Public STRK</dt><dd title={data.public_balance}>{formatStrk(data.public_balance)}</dd>
@@ -156,6 +164,7 @@ export function Privacy({status}: {status: Status}) {
         <dt>Registration</dt><dd>{data.registered?(data.registration_mature?"Registered":"Registered · settling…"):"Not registered with this pool"}</dd>
         <dt>Shielding</dt><dd>{screeningMissing?"Unavailable · screening missing":screeningRequired?"Screening not verified":"Pool policy applies"}</dd></dl>
       {!data.registered&&<><p className="muted small">Register once to use this pool. Click Register, approve the fees once, and gravity handles the rest.</p><button className="primary" disabled={disabled} onClick={()=>prepare("register")}>Register</button></>}
+      {hosted&&<p className="muted small" role="status">{!relay?.reachable?"Starkscan adapter is not running.":`Hosted attempts today: ${relay.local_attempts} / ${relay.local_limit} across local clients. Resets at 00:00 UTC. This counter does not include requests sent outside the adapter.`}{relay?.pending?.length?" A hosted proof is unresolved; wait or check the shared relay status.":""}{relay?.retry_after_seconds?` Retry after ${relay.retry_after_seconds} seconds.`:""}</p>}
     </div>}
     {data?.registered&&!review&&(!submitted||accepted||receipt?.execution_status==="REVERTED")&&<div className="privacy-card">
       <label htmlFor="privacy-operation">Action</label>
@@ -164,10 +173,10 @@ export function Privacy({status}: {status: Status}) {
       </select>
       <label htmlFor="privacy-amount">Amount in STRK</label><input id="privacy-amount" className="input" inputMode="decimal" value={quantity} disabled={Boolean(busy)} onChange={e=>setQuantity(e.target.value)}/>
       {operation!=="deposit"&&<><label htmlFor="privacy-recipient">{operation==="transfer"?"Registered recipient":"Public recipient (blank = this account)"}</label><input id="privacy-recipient" className="input" placeholder="0x…" value={recipient} disabled={Boolean(busy)} onChange={e=>setRecipient(e.target.value)}/></>}
-      {operation==="deposit"&&<p className="muted small">{screeningMissing?"Direct shielding is unavailable for this pool. gravity needs an authorized screening integration; your registration is complete and no deposit was submitted.":screeningRequired?"This pool requires an authorized screening signature for every deposit. Registration and a running prover alone do not enable shielding. Screening access is not included with gravity yet.":"Shielding makes a public deposit. This pool enforces its configured deposit policy."}</p>}
+      {operation==="deposit"&&<p className="muted small">{screeningMissing?"Direct shielding is unavailable for this pool. The selected prover returned no authorized screening signature; no deposit was submitted.":hosted?"Shielding uses Starkscan’s hosted prover and screening service. Each new proof attempt uses the shared allowance, even if you later cancel. Approve promptly: screening expires within five minutes.":screeningRequired?"This pool requires an authorized screening signature for every deposit. Use an authorized prover or select Starkscan in Privacy services with operator-issued access.":"Shielding makes a public deposit. This pool enforces its configured deposit policy."}</p>}
       {operation==="transfer"&&<p className="muted small">The recipient must be registered. Pool notes stay private, but submitting from this account reveals who paid the network fee.</p>}
       {operation==="withdraw"&&<p className="muted small">Unshielding reveals the amount and recipient. New notes need time to mature before spending.</p>}
-      <button className="primary" disabled={disabled||!data.registration_mature||(operation==="deposit"&&screeningMissing)} onClick={()=>prepare(operation)}>{operation==="deposit"?(screeningMissing?"Shielding unavailable":"Shield STRK"):labels[operation]}</button>
+      <button className="primary" disabled={disabled||!data.registration_mature||(operation==="deposit"&&(screeningMissing||hostedBlocked))} onClick={()=>prepare(operation)}>{operation==="deposit"?(screeningMissing||hostedBlocked?"Shielding unavailable":"Shield STRK"):labels[operation]}</button>
       {!data.registration_mature&&<p className="muted small">Registration is accepted. Waiting for the pool state to settle before your next action…</p>}
     </div>}
     {review&&<div className="privacy-card" aria-label="Privacy transaction review">

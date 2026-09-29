@@ -1,6 +1,6 @@
 # gravity project status
 
-Updated 2026-09-27. History: [progress log](progress-log.md).
+Updated 2026-09-29. History: [progress log](progress-log.md).
 
 ## Resume here
 
@@ -9,9 +9,12 @@ agent methods. Build/run steps are in the [README](../../README.md); architectur
 configuration and recovery are in the [privacy guide](../code/privacy-stack.md).
 The first pool adapter is STRK20 v2-compatible and currently handles STRK.
 Different pool ABIs or compliance protocols require another reviewed adapter.
-Direct shielding into the default pool is blocked on an operator-authorized
-screening integration. Do not present it as an end-user configuration task or as
-working out of the box. Missing attestations now persist as a readiness diagnostic.
+The [Starkscan deposit adapter](../code/starkscan-screening.md) and native routing
+are implemented locally. Next: run the full socket-based tests, start the one
+shared adapter, confirm operator access, and verify one approved deposit end to
+end. This session cannot open listeners or reach external APIs, so the adapter
+is not running and these changes are not yet published or installed in the app.
+Do not claim out-of-the-box screening or a live accepted hosted deposit.
 
 ## Implemented
 
@@ -28,8 +31,23 @@ working out of the box. Missing attestations now persist as a readiness diagnost
   final human approval, one-shot broadcast and receipt journal recovery.
 - Wallet-owned SDK child, constrained Rust signing, exact allowances, explicit
   chain, mature reference blocks and private request-log redaction.
+- Optional mainnet deposit-only Starkscan routing, shared SQLite accounting and
+  idempotent recovery, private result persistence, and attestation expiry checks.
 
-## Validation
+## Validation — current change
+
+- Nine shared-relay tests passed with injected HTTP responses, including UTC
+  limits, interrupted delivery, result persistence, error redaction and expiry.
+- Five targeted Rust privacy tests passed. `cargo build` and strict workspace
+  clippy passed. Seventeen desktop tests and the TypeScript/Vite build passed.
+  The unsigned Apple Silicon app bundle builds; the installed app is unchanged.
+- Full Rust and SDK pipeline tests are blocked by sandbox `EPERM` when binding
+  loopback sockets; the same failure occurs before changes in the existing suite.
+  Do not label the full suite passed for this change.
+- Live API checks and GitHub publication are blocked by network restrictions.
+  No live hosted proof was requested and no funds were moved for this change.
+
+## Previous validation — 2026-09-27
 
 - `cargo build`, `cargo test`: passed, 147 tests. Two opt-in checks skipped in
   the default suite (live prover health and the SDK pipeline).
@@ -51,8 +69,9 @@ working out of the box. Missing attestations now persist as a readiness diagnost
 - Independent security review of the new viewing-key derivation and signing/
   pool-action path, plus inherited experimental `krusty-kms`, before production
   mainnet use. Structural tests do not establish audit completion or portability.
-- Operator-authorized screening integration for screened deposits. A plain
-  self-hosted prover does not provide that authorization.
+- Live operator-authorized screened proving, service startup, full integration
+  checks and publication of the new adapter. A plain self-hosted prover does not
+  provide deposit-screening authorization.
 - Live accepted receipts and discovered balances for shield → transfer → withdraw
   through this integration. Registration is live-verified; shield/transfer/withdraw remain unverified.
 
