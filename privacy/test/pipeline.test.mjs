@@ -8,7 +8,8 @@ import {Signer,ec,hash} from 'starknet';
 import {STRK} from '../worker.mjs';
 const vk='42',pool='0x123',account='0x456',chain='0x534e5f4d41494e';
 const publicKey=ec.starkCurve.getStarkKey('0x2a');
-async function pipeline(operation,{screened=false,wrongChain=false,noteAt=900,policy='required',mode='prepare',discoveryFails=false}={}) {
+async function pipeline(operation,{screened=false,wrongChain=false,noteAt=900,policy='required',mode='prepare',discoveryFails=false,
+ publicBalance=100n*10n**18n,finalBalance=publicBalance,spentAtHead=false,channelAdvanced=false,channelAdded=false,wrongBlock=false}={}) {
  const methods=[],callbacks=[],requests=[];
  const server=createServer(async(req,res)=>{
   const chunks=[];for await(const c of req)chunks.push(c);
@@ -23,7 +24,10 @@ async function pipeline(operation,{screened=false,wrongChain=false,noteAt=900,po
     const selector=params.request.entry_point_selector;
     if(selector===hash.getSelectorFromName('get_public_key'))value=[operation==='register'?'0x0':publicKey];
     else if(selector===hash.getSelectorFromName('get_fee_amount'))value=['0x53444835ec580000'];
-    else if(selector===hash.getSelectorFromName('balanceOf'))value=['0x56bc75e2d63100000','0x0'];
+    else if(selector===hash.getSelectorFromName('balanceOf')){
+     const balance=methods.includes('starknet_estimateFee')?finalBalance:publicBalance;
+     value=['0x'+(balance&((1n<<128n)-1n)).toString(16),'0x'+(balance>>128n).toString(16)];
+    }
     else throw new Error('Unexpected call');
    } else if(method==='starknet_estimateFee') {
     assert.ok(!JSON.stringify(params).includes(hash.getSelectorFromName('compile_actions')));
@@ -32,13 +36,15 @@ async function pipeline(operation,{screened=false,wrongChain=false,noteAt=900,po
    } else throw new Error('Unexpected node method '+method);
    value={jsonrpc:'2.0',id:input.id,result:value};
   } else if(req.url==='/v1/sync/outgoing_state') {
-   assert.equal(input.block_ref,990);
-   value={block_ref:990,channels:[{recipient_addr:account,recipient_public_key:publicKey,channel_key:'0x0',precomputed:true}],subchannels:[],cursor:{channel_discovery_complete:true,total_n_channels:0,channels:{}}};
+   assert.ok([990,1000].includes(input.block_ref));
+   value={block_ref:wrongBlock?989:input.block_ref,channels:[{recipient_addr:account,recipient_public_key:publicKey,channel_key:channelAdvanced?'0x7b':'0x0',precomputed:!channelAdvanced}],
+    subchannels:channelAdvanced?[{recipient_addr:account,token:STRK,last_note_index:input.block_ref===1000?1:0}]:[],
+    cursor:{channel_discovery_complete:true,total_n_channels:channelAdded&&input.block_ref===1000?1:0,channels:{}}};
   } else if(req.url==='/v1/sync/incoming_state') {
-   assert.equal(input.block_ref,mode==='balances'?1000:990);
+   assert.ok([990,1000].includes(input.block_ref));
    if(discoveryFails){res.writeHead(503,{'Content-Type':'application/json'});res.end(JSON.stringify({error:'synthetic discovery failure'}));return;}
-   value={block_ref:990,channels:[{sender_addr:'0x789',channel_key:'0x7b'}],
-    notes:[{sender_addr:'0x789',token:STRK,note_id:'0xabc',amount:'12000000000000000000',block_number:noteAt,index:0,salt:'2'}],
+   value={block_ref:wrongBlock?989:input.block_ref,channels:[{sender_addr:'0x789',channel_key:'0x7b'}],
+    notes:spentAtHead&&input.block_ref===1000?[]:[{sender_addr:'0x789',token:STRK,note_id:'0xabc',amount:'12000000000000000000',block_number:noteAt,index:0,salt:'2'}],
     cursor:{channel_discovery_complete:true,total_n_channels:1,channels:{}}};
   } else throw new Error('Unexpected discovery route');
   res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify(value));
@@ -102,4 +108,32 @@ test('balance discovery is pinned to head and separates fresh from spendable not
 test('balance discovery errors have a safe distinct code and never request a signature',async()=>{
  const {result,callbacks}=await pipeline('deposit',{mode:'balances',discoveryFails:true});
  assert.deepEqual(callbacks,['error']);assert.equal(result.code,'DISCOVERY');
+});
+
+for(const publicBalance of [15n*10n**18n,16n*10n**18n])test(`deposit rejects insufficient public funds (${publicBalance}) before proving`,async()=>{
+ const {result,callbacks,methods}=await pipeline('deposit',{publicBalance});
+ assert.equal(result.code,'PUBLIC_BALANCE');assert.deepEqual(callbacks,['error']);assert.ok(!methods.includes('starknet_estimateFee'));
+});
+test('private transfer checks public pool fees before proving',async()=>{
+ const {result,callbacks}=await pipeline('transfer',{publicBalance:5n*10n**18n});
+ assert.equal(result.code,'PUBLIC_BALANCE');assert.deepEqual(callbacks,['error']);
+});
+test('final review requires the padded network fee as well as deposit and pool fee',async()=>{
+ const {result,callbacks}=await pipeline('deposit',{screened:true,finalBalance:16n*10n**18n+92n});
+ assert.equal(result.code,'PUBLIC_BALANCE');assert.deepEqual(callbacks,['sign','prove','error']);
+});
+test('public funds checks include the high u256 limb',async()=>{
+ const {result}=await pipeline('deposit',{screened:true,publicBalance:1n<<128n});assert.equal(result.kind,'result');
+});
+for(const operation of ['transfer','withdraw'])test(`${operation} rejects a note spent after the proof base before signing`,async()=>{
+ const {result,callbacks}=await pipeline(operation,{spentAtHead:true});
+ assert.equal(result.code,'STALE_STATE');assert.deepEqual(callbacks,['error']);
+});
+for(const change of ['channelAdvanced','channelAdded'])test(`deposit rejects ${change} after the proof base before screening`,async()=>{
+ const {result,callbacks}=await pipeline('deposit',{[change]:true});
+ assert.equal(result.code,'STALE_STATE');assert.deepEqual(callbacks,['error']);
+});
+test('discovery returning a different block fails before signing',async()=>{
+ const {result,callbacks}=await pipeline('deposit',{wrongBlock:true});
+ assert.equal(result.code,'DISCOVERY');assert.deepEqual(callbacks,['error']);
 });

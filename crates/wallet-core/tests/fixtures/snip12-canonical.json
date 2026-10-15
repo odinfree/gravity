@@ -1,0 +1,654 @@
+{
+  "reference": "starknet.js 10.5.0 (privacy/package-lock.json)",
+  "vectors": [
+    {
+      "account_address": "0x02000ba5ba904aed0858233e8f782bbc07fd31298824074e05a871f28642342c",
+      "typed_data": {
+        "types": {
+          "StarknetDomain": [
+            {
+              "name": "name",
+              "type": "shortstring"
+            },
+            {
+              "name": "version",
+              "type": "shortstring"
+            },
+            {
+              "name": "chainId",
+              "type": "shortstring"
+            },
+            {
+              "name": "revision",
+              "type": "shortstring"
+            }
+          ],
+          "Message": [
+            {
+              "name": "memo",
+              "type": "string"
+            },
+            {
+              "name": "entrypoint",
+              "type": "selector"
+            }
+          ]
+        },
+        "primaryType": "Message",
+        "domain": {
+          "name": "gravity",
+          "version": "1",
+          "chainId": "SN_MAIN",
+          "revision": "1"
+        },
+        "message": {
+          "memo": "hello",
+          "entrypoint": "transfer"
+        }
+      },
+      "message_hash": "0x38a77e02bb51a890546430ce763e98cc3e08ee194fa10afc56f007584fc9ec9",
+      "accepted": true
+    },
+    {
+      "account_address": "0x02000ba5ba904aed0858233e8f782bbc07fd31298824074e05a871f28642342c",
+      "typed_data": {
+        "types": {
+          "StarknetDomain": [
+            {
+              "name": "name",
+              "type": "shortstring"
+            },
+            {
+              "name": "version",
+              "type": "shortstring"
+            },
+            {
+              "name": "chainId",
+              "type": "shortstring"
+            },
+            {
+              "name": "revision",
+              "type": "shortstring"
+            }
+          ],
+          "Message": [
+            {
+              "name": "memo",
+              "type": "string"
+            },
+            {
+              "name": "entrypoint",
+              "type": "selector"
+            }
+          ]
+        },
+        "primaryType": "Message",
+        "domain": {
+          "name": "gravity",
+          "version": "1",
+          "chainId": "SN_MAIN",
+          "revision": "1"
+        },
+        "message": {
+          "memo": "A ByteArray memo, long enough to span more than one 31-byte word.",
+          "entrypoint": "0x1234"
+        }
+      },
+      "message_hash": "0x419224aadf7549f9a786d0908ec131c9d9a726f872e4b08e38bca0b880221",
+      "accepted": false
+    },
+    {
+      "account_address": "0x02000ba5ba904aed0858233e8f782bbc07fd31298824074e05a871f28642342c",
+      "typed_data": {
+        "types": {
+          "StarknetDomain": [
+            {
+              "name": "name",
+              "type": "shortstring"
+            },
+            {
+              "name": "version",
+              "type": "shortstring"
+            },
+            {
+              "name": "chainId",
+              "type": "shortstring"
+            },
+            {
+              "name": "revision",
+              "type": "shortstring"
+            }
+          ],
+          "Message": [
+            {
+              "name": "memo",
+              "type": "string"
+            },
+            {
+              "name": "entrypoint",
+              "type": "selector"
+            }
+          ]
+        },
+        "primaryType": "Message",
+        "domain": {
+          "name": "gravity",
+          "version": "1",
+          "chainId": "SN_SEPOLIA",
+          "revision": "1"
+        },
+        "message": {
+          "memo": "hello",
+          "entrypoint": "transfer"
+        }
+      },
+      "message_hash": "0x7a2750022df7780efe6a622e6272bea6ec66667e7e483cc4048930dde2882da",
+      "accepted": true
+    },
+    {
+      "account_address": "0x02000ba5ba904aed0858233e8f782bbc07fd31298824074e05a871f28642342c",
+      "typed_data": {
+        "types": {
+          "StarknetDomain": [
+            {
+              "name": "name",
+              "type": "shortstring"
+            },
+            {
+              "name": "version",
+              "type": "shortstring"
+            },
+            {
+              "name": "chainId",
+              "type": "shortstring"
+            },
+            {
+              "name": "revision",
+              "type": "shortstring"
+            }
+          ],
+          "Message": [
+            {
+              "name": "memo",
+              "type": "string"
+            },
+            {
+              "name": "entrypoint",
+              "type": "selector"
+            }
+          ]
+        },
+        "primaryType": "Message",
+        "domain": {
+          "name": "gravity",
+          "version": "1",
+          "chainId": "SN_SEPOLIA",
+          "revision": "1"
+        },
+        "message": {
+          "memo": "A ByteArray memo, long enough to span more than one 31-byte word.",
+          "entrypoint": "0x1234"
+        }
+      },
+      "message_hash": "0x45c398e37f28e31dea47dfbb898a07a29ceaf2a111f8d3217c536afeef4b8b1",
+      "accepted": false
+    },
+    {
+      "account_address": "0x02000ba5ba904aed0858233e8f782bbc07fd31298824074e05a871f28642342c",
+      "typed_data": {
+        "types": {
+          "StarknetDomain": [
+            {
+              "name": "name",
+              "type": "shortstring"
+            },
+            {
+              "name": "version",
+              "type": "shortstring"
+            },
+            {
+              "name": "chainId",
+              "type": "shortstring"
+            },
+            {
+              "name": "revision",
+              "type": "shortstring"
+            }
+          ],
+          "Message": [
+            {
+              "name": "memo",
+              "type": "string"
+            },
+            {
+              "name": "entrypoint",
+              "type": "selector"
+            }
+          ]
+        },
+        "primaryType": "Message",
+        "domain": {
+          "name": "gravity",
+          "version": "1",
+          "chainId": "SN_MAIN",
+          "revision": "1"
+        },
+        "message": {
+          "memo": "A ByteArray memo, long enough to span more than one 31-byte word.",
+          "entrypoint": "transfer"
+        }
+      },
+      "message_hash": "0x2ba6ff514ecd6412b2b17fdc3e82b805d62aaffab6cc9b2bb84a5ed76f10037",
+      "accepted": true
+    },
+    {
+      "account_address": "0x02000ba5ba904aed0858233e8f782bbc07fd31298824074e05a871f28642342c",
+      "typed_data": {
+        "types": {
+          "StarknetDomain": [
+            {
+              "name": "name",
+              "type": "shortstring"
+            },
+            {
+              "name": "version",
+              "type": "shortstring"
+            },
+            {
+              "name": "chainId",
+              "type": "shortstring"
+            },
+            {
+              "name": "revision",
+              "type": "shortstring"
+            }
+          ],
+          "Message": [
+            {
+              "name": "memo",
+              "type": "string"
+            },
+            {
+              "name": "entrypoint",
+              "type": "selector"
+            }
+          ]
+        },
+        "primaryType": "Message",
+        "domain": {
+          "name": "gravity",
+          "version": "1",
+          "chainId": "SN_SEPOLIA",
+          "revision": "1"
+        },
+        "message": {
+          "memo": "A ByteArray memo, long enough to span more than one 31-byte word.",
+          "entrypoint": "transfer"
+        }
+      },
+      "message_hash": "0x2a48018c192680c0cabd85266d52af2a890234cb47c20500ff3b80757349b47",
+      "accepted": true
+    },
+    {
+      "case": "nested",
+      "accepted": true,
+      "account_address": "0x02000ba5ba904aed0858233e8f782bbc07fd31298824074e05a871f28642342c",
+      "typed_data": {
+        "types": {
+          "StarknetDomain": [
+            {
+              "name": "name",
+              "type": "shortstring"
+            },
+            {
+              "name": "version",
+              "type": "shortstring"
+            },
+            {
+              "name": "chainId",
+              "type": "shortstring"
+            },
+            {
+              "name": "revision",
+              "type": "shortstring"
+            }
+          ],
+          "Message": [
+            {
+              "name": "calls",
+              "type": "Call*"
+            }
+          ],
+          "Call": [
+            {
+              "name": "entrypoints",
+              "type": "selector*"
+            },
+            {
+              "name": "target",
+              "type": "ContractAddress"
+            }
+          ]
+        },
+        "primaryType": "Message",
+        "domain": {
+          "name": "gravity",
+          "version": "1",
+          "chainId": "SN_MAIN",
+          "revision": "1"
+        },
+        "message": {
+          "calls": [
+            {
+              "entrypoints": [
+                "transfer",
+                "approve"
+              ],
+              "target": "0x1234"
+            }
+          ]
+        }
+      },
+      "message_hash": "0x30d7c4a662f855d0fac5c87a2a8b00614b36cfadff8756241158545944d40ab"
+    },
+    {
+      "case": "nested-numeric-selector",
+      "accepted": false,
+      "account_address": "0x02000ba5ba904aed0858233e8f782bbc07fd31298824074e05a871f28642342c",
+      "typed_data": {
+        "types": {
+          "StarknetDomain": [
+            {
+              "name": "name",
+              "type": "shortstring"
+            },
+            {
+              "name": "version",
+              "type": "shortstring"
+            },
+            {
+              "name": "chainId",
+              "type": "shortstring"
+            },
+            {
+              "name": "revision",
+              "type": "shortstring"
+            }
+          ],
+          "Message": [
+            {
+              "name": "calls",
+              "type": "Call*"
+            }
+          ],
+          "Call": [
+            {
+              "name": "entrypoints",
+              "type": "selector*"
+            },
+            {
+              "name": "target",
+              "type": "ContractAddress"
+            }
+          ]
+        },
+        "primaryType": "Message",
+        "domain": {
+          "name": "gravity",
+          "version": "1",
+          "chainId": "SN_MAIN",
+          "revision": "1"
+        },
+        "message": {
+          "calls": [
+            {
+              "entrypoints": [
+                "transfer",
+                "0x1234"
+              ],
+              "target": "0x1234"
+            }
+          ]
+        }
+      },
+      "message_hash": "0x75e8a709f84b01f812ed8dbbff2dcd51f8d76931c2d2fa6a9392d603a5b19f6"
+    },
+    {
+      "case": "enum",
+      "accepted": true,
+      "account_address": "0x02000ba5ba904aed0858233e8f782bbc07fd31298824074e05a871f28642342c",
+      "typed_data": {
+        "types": {
+          "StarknetDomain": [
+            {
+              "name": "name",
+              "type": "shortstring"
+            },
+            {
+              "name": "version",
+              "type": "shortstring"
+            },
+            {
+              "name": "chainId",
+              "type": "shortstring"
+            },
+            {
+              "name": "revision",
+              "type": "shortstring"
+            }
+          ],
+          "Message": [
+            {
+              "name": "action",
+              "type": "enum",
+              "contains": "Action"
+            }
+          ],
+          "Action": [
+            {
+              "name": "Call",
+              "type": "(selector,u128)"
+            },
+            {
+              "name": "None",
+              "type": "()"
+            }
+          ]
+        },
+        "primaryType": "Message",
+        "domain": {
+          "name": "gravity",
+          "version": "1",
+          "chainId": "SN_MAIN",
+          "revision": "1"
+        },
+        "message": {
+          "action": {
+            "Call": [
+              "transfer",
+              "42"
+            ]
+          }
+        }
+      },
+      "message_hash": "0x4bdd5ed0acd27e1fcaceb0367612bb06cb0bf767b06f4c893be1ec393983778"
+    },
+    {
+      "case": "enum-numeric-selector",
+      "accepted": false,
+      "account_address": "0x02000ba5ba904aed0858233e8f782bbc07fd31298824074e05a871f28642342c",
+      "typed_data": {
+        "types": {
+          "StarknetDomain": [
+            {
+              "name": "name",
+              "type": "shortstring"
+            },
+            {
+              "name": "version",
+              "type": "shortstring"
+            },
+            {
+              "name": "chainId",
+              "type": "shortstring"
+            },
+            {
+              "name": "revision",
+              "type": "shortstring"
+            }
+          ],
+          "Message": [
+            {
+              "name": "action",
+              "type": "enum",
+              "contains": "Action"
+            }
+          ],
+          "Action": [
+            {
+              "name": "Call",
+              "type": "(selector,u128)"
+            },
+            {
+              "name": "None",
+              "type": "()"
+            }
+          ]
+        },
+        "primaryType": "Message",
+        "domain": {
+          "name": "gravity",
+          "version": "1",
+          "chainId": "SN_MAIN",
+          "revision": "1"
+        },
+        "message": {
+          "action": {
+            "Call": [
+              "0x1234",
+              "42"
+            ]
+          }
+        }
+      },
+      "message_hash": "0x4ddb7c0297ca3b31cf837072ff47daafb8289cf347861f063713187ef070675"
+    },
+    {
+      "case": "merkletree",
+      "accepted": true,
+      "account_address": "0x02000ba5ba904aed0858233e8f782bbc07fd31298824074e05a871f28642342c",
+      "typed_data": {
+        "types": {
+          "StarknetDomain": [
+            {
+              "name": "name",
+              "type": "shortstring"
+            },
+            {
+              "name": "version",
+              "type": "shortstring"
+            },
+            {
+              "name": "chainId",
+              "type": "shortstring"
+            },
+            {
+              "name": "revision",
+              "type": "shortstring"
+            }
+          ],
+          "Message": [
+            {
+              "name": "calls",
+              "type": "merkletree",
+              "contains": "Call"
+            }
+          ],
+          "Call": [
+            {
+              "name": "entrypoint",
+              "type": "selector"
+            }
+          ]
+        },
+        "primaryType": "Message",
+        "domain": {
+          "name": "gravity",
+          "version": "1",
+          "chainId": "SN_MAIN",
+          "revision": "1"
+        },
+        "message": {
+          "calls": [
+            {
+              "entrypoint": "transfer"
+            },
+            {
+              "entrypoint": "approve"
+            }
+          ]
+        }
+      },
+      "message_hash": "0x59d2e92e6a1a1bde935e44d72d1b3d22e4ec05ef6615f899af07ee69c7c7278"
+    },
+    {
+      "case": "merkletree-numeric-selector",
+      "accepted": false,
+      "account_address": "0x02000ba5ba904aed0858233e8f782bbc07fd31298824074e05a871f28642342c",
+      "typed_data": {
+        "types": {
+          "StarknetDomain": [
+            {
+              "name": "name",
+              "type": "shortstring"
+            },
+            {
+              "name": "version",
+              "type": "shortstring"
+            },
+            {
+              "name": "chainId",
+              "type": "shortstring"
+            },
+            {
+              "name": "revision",
+              "type": "shortstring"
+            }
+          ],
+          "Message": [
+            {
+              "name": "calls",
+              "type": "merkletree",
+              "contains": "Call"
+            }
+          ],
+          "Call": [
+            {
+              "name": "entrypoint",
+              "type": "selector"
+            }
+          ]
+        },
+        "primaryType": "Message",
+        "domain": {
+          "name": "gravity",
+          "version": "1",
+          "chainId": "SN_MAIN",
+          "revision": "1"
+        },
+        "message": {
+          "calls": [
+            {
+              "entrypoint": "0x1234"
+            },
+            {
+              "entrypoint": "approve"
+            }
+          ]
+        }
+      },
+      "message_hash": "0x170282327d38dcd79775b47cb9664eb3f26f9133632fd1a32a882ef760dd46d"
+    }
+  ],
+  "selector_policy": "Only function names per SNIP-12; pre-hashed numeric selectors are refused because SDK interpretations differ."
+}

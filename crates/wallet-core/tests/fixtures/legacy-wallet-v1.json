@@ -1,0 +1,542 @@
+{
+  "source_commit": "4beb20a3253e7059ec304fcca1ed41753c2c5576",
+  "krusty_revision": "b50afd674d25a9f9fe085118803baf483614450a",
+  "mnemonic": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+  "pool": "0x7b",
+  "vectors": [
+    {
+      "chain": "mainnet",
+      "domain": "user",
+      "index": 0,
+      "passphrase": null,
+      "path": "m/44'/9004'/0'/0/0",
+      "public_key": "0x05d97a4a9174d9158c3886717a70112c5e60b17318a1d3ae17f563f1cf8292f4",
+      "address": "0x02000ba5ba904aed0858233e8f782bbc07fd31298824074e05a871f28642342c",
+      "class_hash": "0x01d1777db36cdd06dd62cfde77b1b6ae06412af95d57a13dc40ac77b8a702381",
+      "salt": "0x05d97a4a9174d9158c3886717a70112c5e60b17318a1d3ae17f563f1cf8292f4",
+      "constructor_calldata": [
+        "0x05d97a4a9174d9158c3886717a70112c5e60b17318a1d3ae17f563f1cf8292f4"
+      ],
+      "viewing_key": "0x681c62069979335cbada2c211f64a63e4c1faea44e969f26469bf583b1adce",
+      "invoke_hash": "0x0594267b9d880c00ed564a3f00c10d2699b3defcdaefee7c8eae28b3aebc5528",
+      "signature": [
+        "0x05ba5d64424907083f2205552335f7d34fd54fd50aa5027036f50489c5a77ff7",
+        "0x065c933b280833befb7b07d635a49a0770819f0b7f491f53d8dca3ccdc28d502"
+      ]
+    },
+    {
+      "chain": "mainnet",
+      "domain": "user",
+      "index": 0,
+      "passphrase": "public-test-passphrase",
+      "path": "m/44'/9004'/0'/0/0",
+      "public_key": "0x065939b684f48994b9908194580529437b81f5b4d78b435a3b2eae10e2d9f25c",
+      "address": "0x03591ec857fabfcf46fec179187196979ef191c236c3e25886cfcd33d42fb5f9",
+      "class_hash": "0x01d1777db36cdd06dd62cfde77b1b6ae06412af95d57a13dc40ac77b8a702381",
+      "salt": "0x065939b684f48994b9908194580529437b81f5b4d78b435a3b2eae10e2d9f25c",
+      "constructor_calldata": [
+        "0x065939b684f48994b9908194580529437b81f5b4d78b435a3b2eae10e2d9f25c"
+      ],
+      "viewing_key": "0x681c62069979335cbada2c211f64a63e4c1faea44e969f26469bf583b1adce",
+      "invoke_hash": "0x02df3fa8d6f036f640c483757dbb549656887b23edca9f1c58c38a818e3c0e23",
+      "signature": [
+        "0x01ac06f1b3007b7e1d8bfb56fdd07339a1d6078e550967e7a2ccda8a06eca1f3",
+        "0x033312ac0ab8be4584faecce5a428f02b3ea6dfb3388ae37f268e30b38badba4"
+      ]
+    },
+    {
+      "chain": "mainnet",
+      "domain": "user",
+      "index": 1,
+      "passphrase": null,
+      "path": "m/44'/9004'/0'/0/1",
+      "public_key": "0x03810eab057111f997455e907854d499c312910eed85b6597adff08c56e8b5ea",
+      "address": "0x01bb6a88898af0b5a40b60654ba38c802790d27aecbb34483ff1a91c7584a683",
+      "class_hash": "0x01d1777db36cdd06dd62cfde77b1b6ae06412af95d57a13dc40ac77b8a702381",
+      "salt": "0x03810eab057111f997455e907854d499c312910eed85b6597adff08c56e8b5ea",
+      "constructor_calldata": [
+        "0x03810eab057111f997455e907854d499c312910eed85b6597adff08c56e8b5ea"
+      ],
+      "viewing_key": "0xae7b8c53cdb8fa5cbc5ad46acc08a9a52d4a9395e22aaf01cff08c8b146fd4",
+      "invoke_hash": "0x00d7c6b901fb1130dccf19523b8b59413392545e2aaa0d463056944e402e122c",
+      "signature": [
+        "0x055a5470b93fc889641be2e178ae401a444b7098fe15381cd90fec6cd0b6801b",
+        "0x044685b07265534a88e1b434be007d3fea32efab5e65d5626e755b3fdba2c1f6"
+      ]
+    },
+    {
+      "chain": "mainnet",
+      "domain": "user",
+      "index": 1,
+      "passphrase": "public-test-passphrase",
+      "path": "m/44'/9004'/0'/0/1",
+      "public_key": "0x04c42b6dbd7001a05b305a4d1a8195508d4d61908cecdbf84ec73326f8e90586",
+      "address": "0x035e0f8c67e0fd2acd4505ac6d3bb30c93fdf36773de57c0571b7f89c4884976",
+      "class_hash": "0x01d1777db36cdd06dd62cfde77b1b6ae06412af95d57a13dc40ac77b8a702381",
+      "salt": "0x04c42b6dbd7001a05b305a4d1a8195508d4d61908cecdbf84ec73326f8e90586",
+      "constructor_calldata": [
+        "0x04c42b6dbd7001a05b305a4d1a8195508d4d61908cecdbf84ec73326f8e90586"
+      ],
+      "viewing_key": "0xae7b8c53cdb8fa5cbc5ad46acc08a9a52d4a9395e22aaf01cff08c8b146fd4",
+      "invoke_hash": "0x00225c68fda34da551c3b941d18f15b732eb58851eb37690025ceb04b8327392",
+      "signature": [
+        "0x07686825c2a66ce6ff8515aba8448aefa7c8f6975db0c4ca6f91fd0d0d02bf03",
+        "0x07a476110f6da282e517afd1b2a56ca3b1f867544245de429c4cf9327f9652dc"
+      ]
+    },
+    {
+      "chain": "mainnet",
+      "domain": "user",
+      "index": 65,
+      "passphrase": null,
+      "path": "m/44'/9004'/0'/0/65",
+      "public_key": "0x0607a990876207673cc0bec58f1b1a7a4d854a843fe0bcf68c25d827a2a6e058",
+      "address": "0x05a703a2be2d31ec19f159bb7d0262c6cddffc956043f206e4c2de7a261d507c",
+      "class_hash": "0x01d1777db36cdd06dd62cfde77b1b6ae06412af95d57a13dc40ac77b8a702381",
+      "salt": "0x0607a990876207673cc0bec58f1b1a7a4d854a843fe0bcf68c25d827a2a6e058",
+      "constructor_calldata": [
+        "0x0607a990876207673cc0bec58f1b1a7a4d854a843fe0bcf68c25d827a2a6e058"
+      ],
+      "viewing_key": "0xd85240d277dc780c02a193aac8c1c77541a554ad7f8478e3d94726082307d3",
+      "invoke_hash": "0x02ae6b21209e80b2468e8cf106a803b76fc5b4a1f0960d7382deef3db8c7bf28",
+      "signature": [
+        "0x02fa75ca7cc548bcb82c4061af8084ee0d9b5ff9f6fd7dc4cea76440b5cb3c2d",
+        "0x0597cbb2dca46786b08d91586c59a9c5647b1ec3a229dd8c55be5dec4b9daea8"
+      ]
+    },
+    {
+      "chain": "mainnet",
+      "domain": "user",
+      "index": 65,
+      "passphrase": "public-test-passphrase",
+      "path": "m/44'/9004'/0'/0/65",
+      "public_key": "0x061c69de79772b10a9d544068afe89a282b40d37e6c9c1708dcdf8e407427b01",
+      "address": "0x05c428630961df0905ed0b784ecce20325c829e6666585b397eb3dd9e06b57cd",
+      "class_hash": "0x01d1777db36cdd06dd62cfde77b1b6ae06412af95d57a13dc40ac77b8a702381",
+      "salt": "0x061c69de79772b10a9d544068afe89a282b40d37e6c9c1708dcdf8e407427b01",
+      "constructor_calldata": [
+        "0x061c69de79772b10a9d544068afe89a282b40d37e6c9c1708dcdf8e407427b01"
+      ],
+      "viewing_key": "0xd85240d277dc780c02a193aac8c1c77541a554ad7f8478e3d94726082307d3",
+      "invoke_hash": "0x00f43b0d9cba86e50fccd79a70bc43670573fdf95dffef0859543e18d90000e4",
+      "signature": [
+        "0x01386e7038f911a1669fc387f1942107b5cfb3144f5391ddd8cbbde4c3a90011",
+        "0x03b7ca166c9657037038c29e890598a991f013617a58c40186551ab53aa8ac4d"
+      ]
+    },
+    {
+      "chain": "mainnet",
+      "domain": "agent",
+      "index": 0,
+      "passphrase": null,
+      "path": "m/44'/9004'/65'/0/0",
+      "public_key": "0x0347a6e2ae581a3c3ba164fd5a007bcfacbe4cdea726b5479ebac109264af476",
+      "address": "0x00ae50b86bf7bd3e74ebc2ea516a416b680b6798c6b4827436687fdeced0ecf1",
+      "class_hash": "0x01d1777db36cdd06dd62cfde77b1b6ae06412af95d57a13dc40ac77b8a702381",
+      "salt": "0x0347a6e2ae581a3c3ba164fd5a007bcfacbe4cdea726b5479ebac109264af476",
+      "constructor_calldata": [
+        "0x0347a6e2ae581a3c3ba164fd5a007bcfacbe4cdea726b5479ebac109264af476"
+      ],
+      "viewing_key": "0xa91775d472518455f3b1507d776ce1a43002282f15955c7c678975e96abf27",
+      "invoke_hash": "0x07eda8c66641f304b2d70ff333b187df4d416adbcbfc91aa76f29d6e7cab000e",
+      "signature": [
+        "0x076ec0a258f21d8ae9f0265bc0ed4a3979196eed96e173dc8d022fe97357429e",
+        "0x04be025ff8938b5df9f4ecbdbd6dffe4bba5e55e4c04851b0d3ba2262c366817"
+      ]
+    },
+    {
+      "chain": "mainnet",
+      "domain": "agent",
+      "index": 0,
+      "passphrase": "public-test-passphrase",
+      "path": "m/44'/9004'/65'/0/0",
+      "public_key": "0x04a02840b8054c907b4116b1c665db5c1336b2c7899bd7196660ed1822819cda",
+      "address": "0x07102c6dfcba1937f27cfb1414521f1edfff570336c211e1c6a04a6220fff1b7",
+      "class_hash": "0x01d1777db36cdd06dd62cfde77b1b6ae06412af95d57a13dc40ac77b8a702381",
+      "salt": "0x04a02840b8054c907b4116b1c665db5c1336b2c7899bd7196660ed1822819cda",
+      "constructor_calldata": [
+        "0x04a02840b8054c907b4116b1c665db5c1336b2c7899bd7196660ed1822819cda"
+      ],
+      "viewing_key": "0xa91775d472518455f3b1507d776ce1a43002282f15955c7c678975e96abf27",
+      "invoke_hash": "0x03c93ba75c22404823cc417285cd21372c3b9eb3c3280a9633864a7256a77ad9",
+      "signature": [
+        "0x03833bdab874b4c63d43b9d9610d722ae1bc16d23b9c8e68a13ecef8c6d1b98c",
+        "0x06ab8f715acac545a3379ebb5ae86fd03a82d5d43effbe70401cfd3945a985c2"
+      ]
+    },
+    {
+      "chain": "mainnet",
+      "domain": "agent",
+      "index": 1,
+      "passphrase": null,
+      "path": "m/44'/9004'/65'/0/1",
+      "public_key": "0x044e380bc55b4c56879b08cfca485846e78bb480224ff6eb86969b8ecfacd303",
+      "address": "0x01fbc0dbb89fa55c73a27c609d97be21f6b894c4f036a849b281c98f0e631d0c",
+      "class_hash": "0x01d1777db36cdd06dd62cfde77b1b6ae06412af95d57a13dc40ac77b8a702381",
+      "salt": "0x044e380bc55b4c56879b08cfca485846e78bb480224ff6eb86969b8ecfacd303",
+      "constructor_calldata": [
+        "0x044e380bc55b4c56879b08cfca485846e78bb480224ff6eb86969b8ecfacd303"
+      ],
+      "viewing_key": "0x8c8f313e68b7bde11bb77db564cb565b259bfdfc6df3b0bfce06bdc9df90ea",
+      "invoke_hash": "0x011bf9979075bbf74fb68dd25c87acc730a3d57b9fd20aa8d8dd34b6257caef9",
+      "signature": [
+        "0x0541ac7c9196d11f28f09eb356d70b2f2fd86e5f9fbd3cb01b36214274848649",
+        "0x02a3047ce6ee01e77384475f1691e04d02610b6d753077a28bb2ee95ddd0244f"
+      ]
+    },
+    {
+      "chain": "mainnet",
+      "domain": "agent",
+      "index": 1,
+      "passphrase": "public-test-passphrase",
+      "path": "m/44'/9004'/65'/0/1",
+      "public_key": "0x06ca1cb493930251bfca3064325b5c80aff1b02c22c1bce9e558820181f9c01f",
+      "address": "0x0053bf6d67fb2e1d02c2ddf93b2192bbd2ef94c6566096b1cce66c16cb820cad",
+      "class_hash": "0x01d1777db36cdd06dd62cfde77b1b6ae06412af95d57a13dc40ac77b8a702381",
+      "salt": "0x06ca1cb493930251bfca3064325b5c80aff1b02c22c1bce9e558820181f9c01f",
+      "constructor_calldata": [
+        "0x06ca1cb493930251bfca3064325b5c80aff1b02c22c1bce9e558820181f9c01f"
+      ],
+      "viewing_key": "0x8c8f313e68b7bde11bb77db564cb565b259bfdfc6df3b0bfce06bdc9df90ea",
+      "invoke_hash": "0x034fccbe4fc38115131148392bfe0d8d10b7ffeea9fbd9643ad1483c0d45eb23",
+      "signature": [
+        "0x03b78f6775f04865a07d55176a8ff3574a215a1769a959df53147467007cf9a4",
+        "0x02e1e34bde179fa68cc2762eb2a935513196e67f19e609099b09ac82ab698db5"
+      ]
+    },
+    {
+      "chain": "mainnet",
+      "domain": "agent",
+      "index": 65,
+      "passphrase": null,
+      "path": "m/44'/9004'/65'/0/65",
+      "public_key": "0x003df1000a766a4dbbc4017ea9c0277f28398464dd9c484e005dfb0af6aae298",
+      "address": "0x01f5647bdf4ea32b836039878551a6695c5eb837f346a1ab2512679664974147",
+      "class_hash": "0x01d1777db36cdd06dd62cfde77b1b6ae06412af95d57a13dc40ac77b8a702381",
+      "salt": "0x003df1000a766a4dbbc4017ea9c0277f28398464dd9c484e005dfb0af6aae298",
+      "constructor_calldata": [
+        "0x003df1000a766a4dbbc4017ea9c0277f28398464dd9c484e005dfb0af6aae298"
+      ],
+      "viewing_key": "0x531f1cbacaa6fb2f25a7cbd44c000b1d3c9ffb3da9800e45ae2506b2b4d977",
+      "invoke_hash": "0x0651484afac97c5b475de279338414a761612831f05900d1f2fb64d5e30bbd74",
+      "signature": [
+        "0x00f848ff9523751cfe7c9436eaf40b7053d39e513c9f03a371d3d1c063e67459",
+        "0x02da8b767d5838e395445f9f898e3c509af2d595a5a05d7d7b259803cd74277e"
+      ]
+    },
+    {
+      "chain": "mainnet",
+      "domain": "agent",
+      "index": 65,
+      "passphrase": "public-test-passphrase",
+      "path": "m/44'/9004'/65'/0/65",
+      "public_key": "0x03d112699d1c9f55ef03cadd9e3d3fbbd6aab7f88886401acdea1a6563e6204b",
+      "address": "0x057b1dea04959d73417ab9d8b3bcb380cf5e1a82695a0c91754e7572b0d600cb",
+      "class_hash": "0x01d1777db36cdd06dd62cfde77b1b6ae06412af95d57a13dc40ac77b8a702381",
+      "salt": "0x03d112699d1c9f55ef03cadd9e3d3fbbd6aab7f88886401acdea1a6563e6204b",
+      "constructor_calldata": [
+        "0x03d112699d1c9f55ef03cadd9e3d3fbbd6aab7f88886401acdea1a6563e6204b"
+      ],
+      "viewing_key": "0x531f1cbacaa6fb2f25a7cbd44c000b1d3c9ffb3da9800e45ae2506b2b4d977",
+      "invoke_hash": "0x04d5a97f163af0cb7c3f852393a9fc0a8b6e6671a310d42ceef0006950859447",
+      "signature": [
+        "0x00f0b4335a0cc3f33cd30a2d7fcfbd64ad7b7a0d0961804102132a3ddf136c9c",
+        "0x03db57df2da0669b78b5ee6456db37f6a5f5cb283a84c28baa7d8577fccfd3c4"
+      ]
+    },
+    {
+      "chain": "sepolia",
+      "domain": "user",
+      "index": 0,
+      "passphrase": null,
+      "path": "m/44'/9004'/0'/0/0",
+      "public_key": "0x05d97a4a9174d9158c3886717a70112c5e60b17318a1d3ae17f563f1cf8292f4",
+      "address": "0x02000ba5ba904aed0858233e8f782bbc07fd31298824074e05a871f28642342c",
+      "class_hash": "0x01d1777db36cdd06dd62cfde77b1b6ae06412af95d57a13dc40ac77b8a702381",
+      "salt": "0x05d97a4a9174d9158c3886717a70112c5e60b17318a1d3ae17f563f1cf8292f4",
+      "constructor_calldata": [
+        "0x05d97a4a9174d9158c3886717a70112c5e60b17318a1d3ae17f563f1cf8292f4"
+      ],
+      "viewing_key": "0xc2558591be4aaf2c6bbdc5b78e9e66155d220136aba7d0cbea6c538306f8f8",
+      "invoke_hash": "0x01889698c0e3ec383939b551b6ee15cd10dc9e00d13f7cf2f680c84652840582",
+      "signature": [
+        "0x009c9a3a05b861601726b76f9c224be2c699d9688305c05d7db1a57612909279",
+        "0x01641110e6a01e3e03cd564eab7b9c26feb212a5fd554013efc14066b847d505"
+      ]
+    },
+    {
+      "chain": "sepolia",
+      "domain": "user",
+      "index": 0,
+      "passphrase": "public-test-passphrase",
+      "path": "m/44'/9004'/0'/0/0",
+      "public_key": "0x065939b684f48994b9908194580529437b81f5b4d78b435a3b2eae10e2d9f25c",
+      "address": "0x03591ec857fabfcf46fec179187196979ef191c236c3e25886cfcd33d42fb5f9",
+      "class_hash": "0x01d1777db36cdd06dd62cfde77b1b6ae06412af95d57a13dc40ac77b8a702381",
+      "salt": "0x065939b684f48994b9908194580529437b81f5b4d78b435a3b2eae10e2d9f25c",
+      "constructor_calldata": [
+        "0x065939b684f48994b9908194580529437b81f5b4d78b435a3b2eae10e2d9f25c"
+      ],
+      "viewing_key": "0xc2558591be4aaf2c6bbdc5b78e9e66155d220136aba7d0cbea6c538306f8f8",
+      "invoke_hash": "0x03f41478e986629ce61f87feaf0df2471e20c7243266a87cbc80bb99e35467db",
+      "signature": [
+        "0x02d3b5c63bbcde65cae3b618486e94533c00f23369623435fb75d0dd148c978e",
+        "0x01479001b720564bd7f41f96468ef7fcb4108dc3629b08478301e556ddb57ce1"
+      ]
+    },
+    {
+      "chain": "sepolia",
+      "domain": "user",
+      "index": 1,
+      "passphrase": null,
+      "path": "m/44'/9004'/0'/0/1",
+      "public_key": "0x03810eab057111f997455e907854d499c312910eed85b6597adff08c56e8b5ea",
+      "address": "0x01bb6a88898af0b5a40b60654ba38c802790d27aecbb34483ff1a91c7584a683",
+      "class_hash": "0x01d1777db36cdd06dd62cfde77b1b6ae06412af95d57a13dc40ac77b8a702381",
+      "salt": "0x03810eab057111f997455e907854d499c312910eed85b6597adff08c56e8b5ea",
+      "constructor_calldata": [
+        "0x03810eab057111f997455e907854d499c312910eed85b6597adff08c56e8b5ea"
+      ],
+      "viewing_key": "0x6e6f5306a286c161afd3fef595a0c49b64b8db655eadc7fcf257509927f3ea",
+      "invoke_hash": "0x0115cb1732fa21da4e0470000f8bd6f28043ea317a642c4a07b44bf80553dbdf",
+      "signature": [
+        "0x07569c42ce32090a0b94b34cd2293952b7a87f1b28619b75f22b6da7df819cde",
+        "0x03ea5352afee81f88a72dd8f6549f58d0bc05c5f64a23e8e633255307cd72176"
+      ]
+    },
+    {
+      "chain": "sepolia",
+      "domain": "user",
+      "index": 1,
+      "passphrase": "public-test-passphrase",
+      "path": "m/44'/9004'/0'/0/1",
+      "public_key": "0x04c42b6dbd7001a05b305a4d1a8195508d4d61908cecdbf84ec73326f8e90586",
+      "address": "0x035e0f8c67e0fd2acd4505ac6d3bb30c93fdf36773de57c0571b7f89c4884976",
+      "class_hash": "0x01d1777db36cdd06dd62cfde77b1b6ae06412af95d57a13dc40ac77b8a702381",
+      "salt": "0x04c42b6dbd7001a05b305a4d1a8195508d4d61908cecdbf84ec73326f8e90586",
+      "constructor_calldata": [
+        "0x04c42b6dbd7001a05b305a4d1a8195508d4d61908cecdbf84ec73326f8e90586"
+      ],
+      "viewing_key": "0x6e6f5306a286c161afd3fef595a0c49b64b8db655eadc7fcf257509927f3ea",
+      "invoke_hash": "0x055d7b9bcb073c33b8153c9badb0a3497633951a66d082c908125cf3d889d399",
+      "signature": [
+        "0x0318153facbf614961f0cf5570f83025724dd81f5f6b7e3a3037dc07778718b4",
+        "0x06e2ebf91cbe50300aa940b1133de3cf5a79fd99ce207460d020a58b565b9004"
+      ]
+    },
+    {
+      "chain": "sepolia",
+      "domain": "user",
+      "index": 65,
+      "passphrase": null,
+      "path": "m/44'/9004'/0'/0/65",
+      "public_key": "0x0607a990876207673cc0bec58f1b1a7a4d854a843fe0bcf68c25d827a2a6e058",
+      "address": "0x05a703a2be2d31ec19f159bb7d0262c6cddffc956043f206e4c2de7a261d507c",
+      "class_hash": "0x01d1777db36cdd06dd62cfde77b1b6ae06412af95d57a13dc40ac77b8a702381",
+      "salt": "0x0607a990876207673cc0bec58f1b1a7a4d854a843fe0bcf68c25d827a2a6e058",
+      "constructor_calldata": [
+        "0x0607a990876207673cc0bec58f1b1a7a4d854a843fe0bcf68c25d827a2a6e058"
+      ],
+      "viewing_key": "0x513b1d43634b8c067e75de8c17c1ef81d1d9d4ddaf96d76c441aac12ad92a8",
+      "invoke_hash": "0x0380ca0a6561f02636dbce8cadc784673f12f6739923573672d2a10d1f4d5069",
+      "signature": [
+        "0x0177e6be83c36e60147cc7328d4976b49f8f88f7c2dfe93c4754c2056db15823",
+        "0x034c30f8532c9186a5cc282b53e87c470305385a175ebcefd96a4bb18f7b0b47"
+      ]
+    },
+    {
+      "chain": "sepolia",
+      "domain": "user",
+      "index": 65,
+      "passphrase": "public-test-passphrase",
+      "path": "m/44'/9004'/0'/0/65",
+      "public_key": "0x061c69de79772b10a9d544068afe89a282b40d37e6c9c1708dcdf8e407427b01",
+      "address": "0x05c428630961df0905ed0b784ecce20325c829e6666585b397eb3dd9e06b57cd",
+      "class_hash": "0x01d1777db36cdd06dd62cfde77b1b6ae06412af95d57a13dc40ac77b8a702381",
+      "salt": "0x061c69de79772b10a9d544068afe89a282b40d37e6c9c1708dcdf8e407427b01",
+      "constructor_calldata": [
+        "0x061c69de79772b10a9d544068afe89a282b40d37e6c9c1708dcdf8e407427b01"
+      ],
+      "viewing_key": "0x513b1d43634b8c067e75de8c17c1ef81d1d9d4ddaf96d76c441aac12ad92a8",
+      "invoke_hash": "0x039e9b1756786caaf91f39a93e02a1d6ca5307a8dc43fb49041d7af5cc1460f1",
+      "signature": [
+        "0x06b4b20a2e9d6b0a259a2c301099a324fe77925fd55eec075531d6014831b6c6",
+        "0x02bdec02860c0970f2c542c10236ecc927d5ec2a9f3b583ce694eb30e0cb427e"
+      ]
+    },
+    {
+      "chain": "sepolia",
+      "domain": "agent",
+      "index": 0,
+      "passphrase": null,
+      "path": "m/44'/9004'/65'/0/0",
+      "public_key": "0x0347a6e2ae581a3c3ba164fd5a007bcfacbe4cdea726b5479ebac109264af476",
+      "address": "0x00ae50b86bf7bd3e74ebc2ea516a416b680b6798c6b4827436687fdeced0ecf1",
+      "class_hash": "0x01d1777db36cdd06dd62cfde77b1b6ae06412af95d57a13dc40ac77b8a702381",
+      "salt": "0x0347a6e2ae581a3c3ba164fd5a007bcfacbe4cdea726b5479ebac109264af476",
+      "constructor_calldata": [
+        "0x0347a6e2ae581a3c3ba164fd5a007bcfacbe4cdea726b5479ebac109264af476"
+      ],
+      "viewing_key": "0x615c61080cd977c80684d2fdd113ac1d67042474e8254cf9a318712ba7b447",
+      "invoke_hash": "0x0576185a83cdb7725d80d24e6d96ac35b433911d8cab3a740783dbed0dc758f2",
+      "signature": [
+        "0x03f796c01b6f9f0b01d5386737ce906274fe48cd26548fd7ef9c9ecb168f7433",
+        "0x01d18a16634f0ff8d657f7427f6949a56cad1e836bc256415e8fa2c84e654c39"
+      ]
+    },
+    {
+      "chain": "sepolia",
+      "domain": "agent",
+      "index": 0,
+      "passphrase": "public-test-passphrase",
+      "path": "m/44'/9004'/65'/0/0",
+      "public_key": "0x04a02840b8054c907b4116b1c665db5c1336b2c7899bd7196660ed1822819cda",
+      "address": "0x07102c6dfcba1937f27cfb1414521f1edfff570336c211e1c6a04a6220fff1b7",
+      "class_hash": "0x01d1777db36cdd06dd62cfde77b1b6ae06412af95d57a13dc40ac77b8a702381",
+      "salt": "0x04a02840b8054c907b4116b1c665db5c1336b2c7899bd7196660ed1822819cda",
+      "constructor_calldata": [
+        "0x04a02840b8054c907b4116b1c665db5c1336b2c7899bd7196660ed1822819cda"
+      ],
+      "viewing_key": "0x615c61080cd977c80684d2fdd113ac1d67042474e8254cf9a318712ba7b447",
+      "invoke_hash": "0x06ca993a8b9c58cd1aa0a7fc69e949d4bfd36388231d0b42664a8bde18761a6f",
+      "signature": [
+        "0x01b1672cbfc82178d652b0c07095f9393cb1bfe974904e9e5947af8e05e30679",
+        "0x0567841ba7cdf81dea113dc140e01c861a92ac07c47442e1544a7a923aabc8e4"
+      ]
+    },
+    {
+      "chain": "sepolia",
+      "domain": "agent",
+      "index": 1,
+      "passphrase": null,
+      "path": "m/44'/9004'/65'/0/1",
+      "public_key": "0x044e380bc55b4c56879b08cfca485846e78bb480224ff6eb86969b8ecfacd303",
+      "address": "0x01fbc0dbb89fa55c73a27c609d97be21f6b894c4f036a849b281c98f0e631d0c",
+      "class_hash": "0x01d1777db36cdd06dd62cfde77b1b6ae06412af95d57a13dc40ac77b8a702381",
+      "salt": "0x044e380bc55b4c56879b08cfca485846e78bb480224ff6eb86969b8ecfacd303",
+      "constructor_calldata": [
+        "0x044e380bc55b4c56879b08cfca485846e78bb480224ff6eb86969b8ecfacd303"
+      ],
+      "viewing_key": "0xd52be21fd5f3f8d8d8fb558e8011b356dc0fed46b45b0eecf040059c8b54fe",
+      "invoke_hash": "0x06697e535a7e222cba3c85830ac9da1efae18a7ffd87492bbdf6321f9c4c9384",
+      "signature": [
+        "0x04851d270c716c564b1ada912b3526f41a9d4bd356733c0a2d421d986bddd5cd",
+        "0x074258c295749d2b533a87cf957f804bc9d9652e6af1f0a904e19fe7192f80c7"
+      ]
+    },
+    {
+      "chain": "sepolia",
+      "domain": "agent",
+      "index": 1,
+      "passphrase": "public-test-passphrase",
+      "path": "m/44'/9004'/65'/0/1",
+      "public_key": "0x06ca1cb493930251bfca3064325b5c80aff1b02c22c1bce9e558820181f9c01f",
+      "address": "0x0053bf6d67fb2e1d02c2ddf93b2192bbd2ef94c6566096b1cce66c16cb820cad",
+      "class_hash": "0x01d1777db36cdd06dd62cfde77b1b6ae06412af95d57a13dc40ac77b8a702381",
+      "salt": "0x06ca1cb493930251bfca3064325b5c80aff1b02c22c1bce9e558820181f9c01f",
+      "constructor_calldata": [
+        "0x06ca1cb493930251bfca3064325b5c80aff1b02c22c1bce9e558820181f9c01f"
+      ],
+      "viewing_key": "0xd52be21fd5f3f8d8d8fb558e8011b356dc0fed46b45b0eecf040059c8b54fe",
+      "invoke_hash": "0x04c86688313a5667ca5139a8e8fd8cb39549331c2cec4001a351c1e62956ece2",
+      "signature": [
+        "0x0082cf3310d1e5c0f75b0fa8577201b671c539b277ec02a17f37b22dde618504",
+        "0x00bde1449d485952e0e6af36f3e9c7502d1b704c34b49421208bf7c5071f4006"
+      ]
+    },
+    {
+      "chain": "sepolia",
+      "domain": "agent",
+      "index": 65,
+      "passphrase": null,
+      "path": "m/44'/9004'/65'/0/65",
+      "public_key": "0x003df1000a766a4dbbc4017ea9c0277f28398464dd9c484e005dfb0af6aae298",
+      "address": "0x01f5647bdf4ea32b836039878551a6695c5eb837f346a1ab2512679664974147",
+      "class_hash": "0x01d1777db36cdd06dd62cfde77b1b6ae06412af95d57a13dc40ac77b8a702381",
+      "salt": "0x003df1000a766a4dbbc4017ea9c0277f28398464dd9c484e005dfb0af6aae298",
+      "constructor_calldata": [
+        "0x003df1000a766a4dbbc4017ea9c0277f28398464dd9c484e005dfb0af6aae298"
+      ],
+      "viewing_key": "0xf2504e434905d1e0ea179195101063b83f9e0fda6106d56d4af31bc0e011d4",
+      "invoke_hash": "0x01dbc19777c896cec38ff392066d226d6e281a621c1ee1099e8f3dcffcad5708",
+      "signature": [
+        "0x066f543bbca77b7b4167e10b398305c7d6efcb859e4d099703793ed301e52ac5",
+        "0x027b6d4e8e60eee91a49a9cb380a2478b2abcb0848820aaceb85cde7ee6e3efe"
+      ]
+    },
+    {
+      "chain": "sepolia",
+      "domain": "agent",
+      "index": 65,
+      "passphrase": "public-test-passphrase",
+      "path": "m/44'/9004'/65'/0/65",
+      "public_key": "0x03d112699d1c9f55ef03cadd9e3d3fbbd6aab7f88886401acdea1a6563e6204b",
+      "address": "0x057b1dea04959d73417ab9d8b3bcb380cf5e1a82695a0c91754e7572b0d600cb",
+      "class_hash": "0x01d1777db36cdd06dd62cfde77b1b6ae06412af95d57a13dc40ac77b8a702381",
+      "salt": "0x03d112699d1c9f55ef03cadd9e3d3fbbd6aab7f88886401acdea1a6563e6204b",
+      "constructor_calldata": [
+        "0x03d112699d1c9f55ef03cadd9e3d3fbbd6aab7f88886401acdea1a6563e6204b"
+      ],
+      "viewing_key": "0xf2504e434905d1e0ea179195101063b83f9e0fda6106d56d4af31bc0e011d4",
+      "invoke_hash": "0x03abba6efa355a0caf3e95886eb2912f636c3ea3fcdf1735b9a2b79761434e82",
+      "signature": [
+        "0x04d5691aad998c75d8429702facc6f9c5a30c5956d195a453b051b4d71128b5b",
+        "0x0183a548f9442d7b17c1abbf37d5b5384eeb6ee77b3a73f075da6ffc4c4e3d83"
+      ]
+    }
+  ],
+  "registry": {
+    "accounts": [
+      {
+        "domain": "user",
+        "index": 0,
+        "address": "0x02000ba5ba904aed0858233e8f782bbc07fd31298824074e05a871f28642342c",
+        "label": "legacy m/44'/9004'/0'/0/0 0"
+      },
+      {
+        "domain": "user",
+        "index": 1,
+        "address": "0x01bb6a88898af0b5a40b60654ba38c802790d27aecbb34483ff1a91c7584a683",
+        "label": "legacy m/44'/9004'/0'/0/1 1"
+      },
+      {
+        "domain": "user",
+        "index": 65,
+        "address": "0x05a703a2be2d31ec19f159bb7d0262c6cddffc956043f206e4c2de7a261d507c",
+        "label": "legacy m/44'/9004'/0'/0/65 65"
+      },
+      {
+        "domain": "agent",
+        "index": 0,
+        "address": "0x00ae50b86bf7bd3e74ebc2ea516a416b680b6798c6b4827436687fdeced0ecf1",
+        "label": "legacy m/44'/9004'/65'/0/0 0",
+        "owner_client_id": "public-test-client"
+      },
+      {
+        "domain": "agent",
+        "index": 1,
+        "address": "0x01fbc0dbb89fa55c73a27c609d97be21f6b894c4f036a849b281c98f0e631d0c",
+        "label": "legacy m/44'/9004'/65'/0/1 1",
+        "owner_client_id": "public-test-client"
+      },
+      {
+        "domain": "agent",
+        "index": 65,
+        "address": "0x01f5647bdf4ea32b836039878551a6695c5eb837f346a1ab2512679664974147",
+        "label": "legacy m/44'/9004'/65'/0/65 65",
+        "owner_client_id": "public-test-client"
+      }
+    ]
+  },
+  "vault": {
+    "version": 1,
+    "kdf": {
+      "m_cost": 65536,
+      "t_cost": 3,
+      "p_cost": 1,
+      "salt": "12f32d54a9a1101a1fc499933b0d16d7"
+    },
+    "nonce": "e249c8dfed9ff6870d8473a5",
+    "ciphertext": "ec8e923dae8fc736b1253f2c8700163c7cd66107d66e1d26b6b66ebb6b3abeed01b793d70ce7fa7733396ff48454a74bfa98fa6c5560facb206e97aecb39d8eea18b77e234553aa257666952cde5cf62dfaffdd492994c85e2beb68313a40e95128a60588415dead67f05a5052c2a085e0aae3914f17cd2dd2ac10df8b1e9be8f6ee3319c92ac6b13ae89115fc5c483d55e7593e3b49023acf18fec7c337b749c5e75ece213acd46fe99c19e6a995b230bd187b6a863777eed95a9fd0205b987a2c6ecbb88b322af8f83466830777b99c45af12598a89a8bc8186649b488a42d28eef35b16d8571c6fa76fa9da86a4bcfd2a0e3157087771eb13c4f95be6e123a4492ef7232551af68cf4cbf12c091aa8dad3183964e242df56411284b78ffb4d272076f138b5bfe597de2407c3d8966802a082dcef12f2cf77649a68abdd5c9bcd4cdace7e1aa6d70a80becb8cf5a11d2177a3cddd296480467135c771116db2d22e60e3c65bb542c3a0eff4d85be64bd5eee4f8914bf5b2743b09f1c7d9dc029e74cad5c29e5474e6a25840a4b25ced57ed28d1d2732c9c767f12b27cd44e310b7c71ec8303fb9870bef6072eed91573f21b4f4a3c5346aea12d32e0c2f6ff4006f6978506b4bc940311b8015360cef7db6bd9ed77cb1e354754349cb5b57bd1cf689c946fac10d15218d735ae024792d2529e86f1edea5c8ad4864948f6815c2fcf540f90c75d40fcce4135114c0c9a381a6695ad32d919fde4958233ff2b15d1db6a51dbf59dbac7a6b267f758ea256a31eb6b20c60718aeab6ede1a99c4debe51596a3635b08762107c2d8d9aec87f800fc29e1111d36ecae7f1e48db4798cf3db38fc82791e0f267a9858e1f68f401c6394781e7c63117b95ebca62b028fdbf93fbd05b6b953bbbb755415ddeaad4f1d5ab144120618f70db5b61922a0144ace81ef31572c0771b49274fc466d22c0fac861921be36390b89cbb6cf777768f91a8e8bba0af93499915a5f610bb5f83cad663e65a143bd7ad196255b148e94ee0b25bc1129e4424a77dc41c90241ab6a7f882ae65c0e6617b216c8e8f5d9bbb7825626d3a6cd8e45b83c85a45dc46484bccb7988e1d4fca1f527895ac23bb1fbf1cd0718e2af7ae1897f6483a294ed8ff1761901c3020ed3239657a9c5843de545f5f77d4d838d67d1ff34ff42e1e3be0b028bd78a6c91d3fc53aaf83ab34609f57f11a323e15c2e5e5168411e4ca8c07f5122ba5dd2422a3d1464bc79c36b8e5e1580b73de5faf33d7785b866fd7c1d9e888cdc26cbd7a3cc2fdc21581aa2c995f4bbb53a8ac3bc721a48d39d29935587c9bd10bebbe7f3b326775abb5994ea7ba6b75e1af7b0d8282108c5160adaa94cb7b0ca06782ba8c04c4e6ec9c21385fc3a0b282049149f351ba1a55e38cae69a700d9f657b35f7c93bd5ea84bd27418e03a1dab4e65a1462dd9ba3b0caaadea92cd179aa33f9961914b894bffbff4b57f34cc1907426bf29a5985a301c935b44e7527cf653495b554110c2af3c951e2a5be7a6b6be67f4b2899a41c8a00810ee1ad41292ba4ddffb7482f4a7959367d4a8ba2f36b90704ee99d351221ba9abfc50f25456f83c4ae8e97"
+  }
+}

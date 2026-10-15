@@ -55,7 +55,7 @@ pub fn public_key(
     passphrase: Option<&str>,
 ) -> Result<Felt> {
     let sk = private_key(mnemonic, domain, index, passphrase)?;
-    Ok(stark_public_key(&sk))
+    stark_public_key(&sk).map_err(|_| CoreError::Derivation)
 }
 
 /// Compute the counterfactual OpenZeppelin account address for `(domain, index)`
@@ -120,7 +120,10 @@ pub fn sign_typed_data(
 /// callers can use it to verify strkd's hashing matches their expectation both
 /// before and after signing. Delegated to `krusty-kms`.
 pub fn typed_data_message_hash(typed_data_json: &str, account_address: &Felt) -> Result<Felt> {
-    compute_typed_data_message_hash(typed_data_json, account_address).map_err(|_| CoreError::Signing)
+    let hash = compute_typed_data_message_hash(typed_data_json, account_address)
+        .map_err(|_| CoreError::Signing)?;
+    crate::typed_data::validate_selector_names(typed_data_json)?;
+    Ok(hash)
 }
 
 /// Sign an already-computed message hash with the key for `(domain, index)`.

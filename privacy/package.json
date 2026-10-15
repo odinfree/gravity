@@ -3,7 +3,9 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "engines": { "node": ">=24" },
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "build": "node build.mjs",
     "test": "node --test test/*.test.mjs"
@@ -12,5 +14,9 @@
     "@starkware-libs/starknet-privacy-sdk": "file:vendor/starkware-libs-starknet-privacy-sdk-0.14.3-rc.8.tgz",
     "starknet": "10.5.0"
   },
-  "devDependencies": { "esbuild": "0.28.2" }
+  "devDependencies": {
+    "@scure/bip32": "1.7.0",
+    "@scure/bip39": "1.6.0",
+    "esbuild": "0.28.2"
+  }
 }

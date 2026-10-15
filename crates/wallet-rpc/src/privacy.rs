@@ -873,6 +873,8 @@ async fn worker(
                         Some("REGISTERED")=>"This account is already registered.",
                         Some("RECIPIENT")=>"The recipient must register in this pool first.",
                         Some("MATURITY")=>"Funding is insufficient or not yet mature at the proof base.",
+                        Some("STALE_STATE")=>"Private notes or channels changed after the proof base. Wait for the recent transaction to mature, then try again. Nothing was submitted.",
+                        Some("PUBLIC_BALANCE")=>"Insufficient public STRK for this action: cover the deposit amount (if shielding), the pool fee, and network fees. Nothing was submitted.",
                         Some("BALANCE")=>"Insufficient mature shielded STRK balance.",
                         Some("CHAIN")=>"The RPC node is on the wrong network.",
                         Some("NODE")=>"The node rejected a privacy read or fee estimate. Nothing was submitted.",

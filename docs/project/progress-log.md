@@ -8,6 +8,49 @@ Use the [entry template](#entry-template) at the bottom for every new entry.
 
 ---
 
+## 2026-10-15 — Selected upstream fixes with legacy wallet compatibility
+
+**Did**
+- Adapted upstream `4b3ee48`, `21daa96`, `1c7a3fe` and `4f1a8e3`:
+  canonical SNIP-12 strings/function-name selectors, mature/current privacy-state
+  comparisons, public deposit/pool/network-fee checks and native proof-size errors.
+- Pinned krusty at `2b6b7b5`; retained Gravity's derivation paths, public-key
+  deployment salt, v1 vault, viewing-key v1, account registry and app identifier.
+- Captured 24 identity/signing vectors and a real encrypted v1 vault from the old
+  code before changing its dependency. Only the public BIP-39 test seed was used.
+- Added independent JS reproduction of public keys/addresses/viewing keys and
+  twelve SNIP-12 cases. Numeric selector strings exposed a Rust/JS interpretation
+  difference; Gravity refuses those inputs, including nested forms, before signing.
+
+**Decisions**
+- Keep the current SDK/self-hosted privacy workflow. Do not import upstream's
+  address/vault migration, Bramble viewing keys, sweep or replacement privacy API.
+- Existing privacy-error redaction is retained. State checks are preflights, not
+  a guarantee against changes during proving. Receipts remain authoritative.
+- Sources, retained identity and encoder limits are recorded in
+  [`upstream-fixes-2026-10.md`](../code/upstream-fixes-2026-10.md).
+
+**Verify**
+- Baseline `cargo test` and strict clippy passed before edits.
+- Updated workspace tests: 154 passed; two opt-in synthetic SDK/Rust pipelines
+  passed separately. Live prover-health check not run. Strict clippy/build pass.
+- Privacy/relay/conformance: 37 tests passed. Desktop: 21 tests and frontend
+  build passed. Unsigned self-hosted Apple Silicon app bundle built locally.
+- Legacy fixture unlock/reseal and signature verification passed. Protected
+  derivation, viewing-key, vault, session and app-ID source files are unchanged.
+
+**Next / Resume**
+- Review the dependency and guard changes, then perform an operator-controlled
+  rollout. The installed app and production wallet data were not changed.
+
+**Notes / caveats**
+- Security-sensitive crypto dependency and privacy-path changes require
+  independent review under `workflow.md`; this is not audit or portability sign-off.
+- No live keys, balances, services or funded transactions were used or verified;
+  no publishing or installation is claimed for this change.
+
+---
+
 ## 2026-09-29 — Visible transaction progress and spendable-balance shortcuts
 
 - Added a fixed progress panel and changing action-button text so a click is

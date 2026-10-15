@@ -123,6 +123,11 @@ identifier/data directory and `STRKD_*` configuration variables. Existing vaults
 accounts and pairings are preserved. Do not run upstream strkd and gravity
 against that same data directory at the same time.
 
+The [October upstream fixes](docs/code/upstream-fixes-2026-10.md) retain Gravity's
+existing account addresses, privacy viewing keys and v1 vault format. They improve
+typed-data signing and stop unaffordable or stale privacy preparations before
+proving. Upstream's breaking address/vault migration is not included.
+
 ## Verification and limits
 
 ```sh

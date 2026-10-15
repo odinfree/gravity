@@ -1,8 +1,23 @@
 # gravity project status
 
-Updated 2026-09-29. History: [progress log](progress-log.md).
+Updated 2026-10-15. History: [progress log](progress-log.md).
 
 ## Resume here
+
+Selected upstream fixes are implemented locally on
+`codex/upstream-compatible-fixes`: canonical typed-data signing, stale private
+state checks, public fee/funding checks and native proof-size diagnostics.
+Existing Gravity addresses, viewing keys, v1 vaults, app identifier and account
+ownership are preserved and regression-tested. See the
+[compatibility record](../code/upstream-fixes-2026-10.md).
+
+The unsigned self-hosted macOS app builds in this checkout. It has not replaced
+the installed app, and this update has not been published or used for a funded
+transaction. Next: independent review of the crypto dependency and privacy
+guards, followed by an operator-controlled rollout. Current services/balances
+were not inspected; the following live checkpoint is historical.
+
+### Prior live checkpoint — 2026-09-29
 
 The local gravity fork now has a native Privacy tab and authenticated privacy
 agent methods. Build/run steps are in the [README](../../README.md); architecture,
@@ -12,7 +27,7 @@ Different pool ABIs or compliance protocols require another reviewed adapter.
 The [Starkscan deposit adapter](../code/starkscan-screening.md) is running locally.
 Operator `prove` access and a live screened deposit are verified: three 10 STRK
 mainnet deposits have successful receipts, and discovery increased by 30 STRK.
-Next: finish private transfer and withdrawal with accepted receipts and balance
+At that checkpoint, the next step was private transfer and withdrawal with accepted receipts and balance
 reconciliation. The native one-click change is installed, and its code commit passed CI.
 The recipient account has since registered and received a successful shield
 through the one-click build. Progress feedback and percentage amount controls
@@ -20,6 +35,10 @@ are implemented and validated; transfer/withdrawal reconciliation remains next. 
 
 ## Implemented
 
+- Selective October upstream fixes while retaining all Gravity wallet identity
+  formats; old vault, public-key/address, privacy-key and signature fixtures pass.
+- Privacy preparation refuses stale notes/channels and insufficient public funds
+  before proving; final review also requires the estimated maximum network fee.
 - gravity branding, standalone repository configuration, CLI and build workflow;
   existing app identifier, vault and key derivation compatibility retained.
 - Account creation/import with Back navigation, agent pairing and existing public
@@ -43,6 +62,21 @@ are implemented and validated; transfer/withdrawal reconciliation remains next. 
   idempotent recovery, private result persistence, and attestation expiry checks.
 
 ## Validation — current change
+
+- `cargo test --locked --workspace`: 154 passed; the two opt-in synthetic SDK/Rust
+  pipeline tests also passed explicitly. The live prover-health check was skipped.
+- Strict workspace clippy and build passed. The 24 pre-update identity vectors
+  pass and are independently reproduced with scure/starknet.js/Node HKDF.
+- A v1 vault captured before the dependency update unlocks/reseals, retains
+  accounts/ownership, and signs messages verifiable with the old public keys.
+- Twelve typed-data reference cases cover strings, function-name selectors,
+  nested arrays, enums and Merkle trees, with ambiguous numeric selectors refused.
+- Privacy/relay/conformance suite: 37 passed. Desktop: 21 passed; TypeScript/Vite
+  and unsigned self-hosted Apple Silicon app builds passed.
+- All new transaction tests use synthetic services and public test keys. No
+  claim of live acceptance, independent audit or installation of this update.
+
+## Previous validation — 2026-09-29
 
 - Nine shared-relay tests passed with injected HTTP responses, including UTC
   limits, interrupted delivery, result persistence, error redaction and expiry.
@@ -85,6 +119,9 @@ are implemented and validated; transfer/withdrawal reconciliation remains next. 
 
 ## Blocked (needs review / external services)
 
+- Independent review of the October `krusty-kms` update, selector input guard,
+  and privacy state/funds checks before production rollout. Regression tests
+  establish local compatibility, not an independent security audit.
 - Independent security review of the new viewing-key derivation and signing/
   pool-action path, plus inherited experimental `krusty-kms`, before production
   mainnet use. Structural tests do not establish audit completion or portability.

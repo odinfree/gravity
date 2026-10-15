@@ -17,6 +17,7 @@ pub mod error;
 pub mod keys;
 pub mod privacy;
 pub mod tx;
+mod typed_data;
 pub mod vault;
 
 pub use accounts::{AccountRef, Registry};
