@@ -1,6 +1,6 @@
 # gravity project status
 
-Updated 2026-10-15. History: [progress log](progress-log.md).
+Updated 2026-10-16. History: [progress log](progress-log.md).
 
 ## Resume here
 
@@ -11,11 +11,14 @@ Existing Gravity addresses, viewing keys, v1 vaults, app identifier and account
 ownership are preserved and regression-tested. See the
 [compatibility record](../code/upstream-fixes-2026-10.md).
 
-The unsigned self-hosted macOS app builds in this checkout. It has not replaced
-the installed app, and this update has not been published or used for a funded
-transaction. Next: independent review of the crypto dependency and privacy
-guards, followed by an operator-controlled rollout. Current services/balances
-were not inspected; the following live checkpoint is historical.
+The reviewed unsigned Apple Silicon build is installed at
+`~/Applications/gravity.app` and starts against the existing application data
+as **Mainnet · locked**, with the existing Unlock screen. The old app and a
+hash-verified copy of its encrypted data are saved privately for rollback.
+The app identifier and 20 protected data files are unchanged after launch.
+This update has not been published or used for a funded transaction. Next:
+the operator can unlock with the existing passphrase, then verify current
+accounts and services in the app. The following live checkpoint is historical.
 
 ### Prior live checkpoint — 2026-09-29
 
@@ -63,18 +66,19 @@ are implemented and validated; transfer/withdrawal reconciliation remains next. 
 
 ## Validation — current change
 
-- `cargo test --locked --workspace`: 154 passed; the two opt-in synthetic SDK/Rust
+- `cargo test --locked --workspace`: 157 passed; the two opt-in synthetic SDK/Rust
   pipeline tests also passed explicitly. The live prover-health check was skipped.
 - Strict workspace clippy and build passed. The 24 pre-update identity vectors
   pass and are independently reproduced with scure/starknet.js/Node HKDF.
 - A v1 vault captured before the dependency update unlocks/reseals, retains
   accounts/ownership, and signs messages verifiable with the old public keys.
-- Twelve typed-data reference cases cover strings, function-name selectors,
-  nested arrays, enums and Merkle trees, with ambiguous numeric selectors refused.
-- Privacy/relay/conformance suite: 37 passed. Desktop: 21 passed; TypeScript/Vite
-  and unsigned self-hosted Apple Silicon app builds passed.
-- All new transaction tests use synthetic services and public test keys. No
-  claim of live acceptance, independent audit or installation of this update.
+- Twelve independent typed-data reference cases plus 35 enum/revision cases
+  cover nested selectors and preserve revision-1 input semantics.
+- Privacy/relay/conformance suite: 43 passed. Desktop: 21 passed; TypeScript/Vite
+  and the updated unsigned self-hosted Apple Silicon app build passed.
+- The [diff review](../code/upstream-fixes-2026-10.md#review-and-installation-2026-10-16)
+  found and resolved two defects. All new transaction tests use synthetic
+  services and public test keys; no live acceptance or human audit is claimed.
 
 ## Previous validation — 2026-09-29
 
@@ -119,12 +123,10 @@ are implemented and validated; transfer/withdrawal reconciliation remains next. 
 
 ## Blocked (needs review / external services)
 
-- Independent review of the October `krusty-kms` update, selector input guard,
-  and privacy state/funds checks before production rollout. Regression tests
-  establish local compatibility, not an independent security audit.
-- Independent security review of the new viewing-key derivation and signing/
-  pool-action path, plus inherited experimental `krusty-kms`, before production
-  mainnet use. Structural tests do not establish audit completion or portability.
+- Independent human security review of the crypto path, viewing-key derivation,
+  signing/pool-action path and experimental `krusty-kms` remains required before
+  production mainnet use. The completed diff review and regression tests do not
+  establish full audit completion or portability.
 - Live accepted receipts and discovered balances for shield → transfer → withdraw
   through this integration. Registration and shielding are live-verified;
   transfer/withdrawal remain unverified.

@@ -162,9 +162,10 @@ receipt polling. Balance discovery pins a numeric chain head; notes newer than
 the mature proof base are excluded from the spendable amount. Read-only worker
 requests time out after 60 seconds; proof preparation retains its 16-minute limit.
 
-Before preparing a proof, SDK discovery compares the mature notes and outgoing
-channel state with a fresh numbered head. A changed note set, channel count or
-channel nonce stops preparation with a maturity message before signing/proving.
+Before preparing a proof, SDK discovery checks that every mature note remains
+unchanged at a fresh numbered head; newly received immature notes do not block
+spending older funds. A removed or changed mature note, changed channel count,
+or advanced channel nonce stops preparation before signing/proving.
 Discovery must return the exact requested block. Public STRK must cover the
 deposit (if any), pool fee and leave funds for gas; after estimation, its current
 balance must cover the padded network fee too. These checks use exact base units

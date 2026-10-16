@@ -8,6 +8,36 @@ Use the [entry template](#entry-template) at the bottom for every new entry.
 
 ---
 
+## 2026-10-16 — Review fixes and local Gravity app update
+
+**Did**
+- Completed an immutable diff review of the October backport. It validated two
+  defects: fresh incoming notes blocked unchanged mature spends, and nested
+  enum selectors bypassed or over-restricted the signing input guard.
+- Fixed both controls. Mature notes are checked for unchanged membership while
+  fresh additions are allowed; every supported enum context checks its selected
+  tuple. Revision-1-only signing/hash behavior remains explicit.
+- Rebuilt and installed the unsigned native app at `~/Applications/gravity.app`
+  using the existing `org.starknet.strkd` identity. Saved the old app and a
+  hash-verified encrypted-data snapshot in a private rollback directory.
+
+**Verify**
+- 157 Rust workspace tests, two opt-in synthetic SDK/Rust pipeline tests,
+  43 privacy tests, strict clippy, and the updated Apple Silicon app build passed.
+- The 24 pre-update identity vectors, old encrypted v1 fixture unlock/reseal,
+  independent JS identity checks, 12 canonical SNIP-12 vectors and 35 new
+  enum/revision cases passed. No fixture was regenerated from the new code.
+- The installed executable hash matches the reviewed bundle. After launch the
+  app showed `Mainnet · locked` and the existing Unlock screen; 20 protected
+  application-data files, including the encrypted vault, retained their hashes.
+
+**Next / Resume**
+- Unlock locally with the existing passphrase to inspect live accounts and
+  services. Human crypto audit and any funded mainnet validation remain separate
+  gates; no real key or funded transaction was used here.
+
+---
+
 ## 2026-10-15 — Selected upstream fixes with legacy wallet compatibility
 
 **Did**

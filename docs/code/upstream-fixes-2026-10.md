@@ -63,8 +63,22 @@ the reopened vault verify against the old public keys. Privacy tests use the rea
 SDK worker and synthetic node/discovery/prover services, checking that unsafe
 preparation fails before signing/proving and never broadcasts.
 
-State may still change while a proof is running. The preflight is not a reservation;
-accepted receipts and balance reconciliation remain necessary. No real wallet,
-credentials or funded transaction was used for these checks. Independent review
-of the crypto dependency update and privacy guards remains required under
-`docs/project/workflow.md` before production use.
+## Review and installation (2026-10-16)
+
+Codex Security diff scan `5ebfc92f-741f-4d49-9f97-c5e86f8d4539` records two
+validated defects in the initial backport. Whole-set note equality
+blocked transfer/withdrawal when a fresh incoming note was added; the guard now
+requires each mature note to remain unchanged and allows additions. Nested enum
+selectors bypassed the numeric-name guard or rejected valid multi-variant
+documents; traversal now checks the selected variant in every supported shape.
+The signing/hash API continues to accept revision 1 only. The revised code passed
+157 Rust workspace tests, two opt-in synthetic pipelines, 43 privacy tests,
+strict clippy, and an unsigned Apple Silicon app build. The installed executable
+matches that build. The existing app identifier and protected data hashes were
+unchanged after the update; Gravity opened to the existing Unlock screen.
+
+State may still change while a proof is running. The preflight is not a
+reservation; accepted receipts and balance reconciliation remain necessary.
+No real wallet was unlocked and no funded transaction was run for this review.
+Independent human crypto review and mainnet sign-off remain gated by
+`docs/project/workflow.md`.

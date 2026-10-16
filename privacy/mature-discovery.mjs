@@ -18,6 +18,27 @@ function canonical(value) {
   return value;
 }
 
+// Incoming transfers may add notes after the proof base. Those notes are not
+// spend inputs and must not block spending the unchanged mature snapshot.
+// Consume a multiset of complete note payloads per token so missing, changed,
+// or duplicated mature inputs still fail closed.
+function matureNotesUnchanged(mature, current) {
+  for (const [token, notes] of mature.notes) {
+    const available = new Map();
+    for (const note of current.notes.get(token) ?? []) {
+      const key = JSON.stringify(canonical(note));
+      available.set(key, (available.get(key) ?? 0) + 1);
+    }
+    for (const note of notes) {
+      const key = JSON.stringify(canonical(note));
+      const count = available.get(key) ?? 0;
+      if (!count) return false;
+      available.set(key, count - 1);
+    }
+  }
+  return true;
+}
+
 export class MatureDiscoveryProvider extends IndexerDiscoveryProvider {
   constructor(url, pool, base, currentHead) {
     super(url, pool);
@@ -25,7 +46,7 @@ export class MatureDiscoveryProvider extends IndexerDiscoveryProvider {
     this.currentHead = currentHead;
   }
 
-  async compare(read, fields) {
+  async compare(read, unchanged) {
     const head = await this.currentHead();
     if (!Number.isSafeInteger(head) || head < this.base) fail('STATE', 'Invalid discovery comparison block');
     const mature = await read(this.base);
@@ -33,8 +54,7 @@ export class MatureDiscoveryProvider extends IndexerDiscoveryProvider {
     if (mature.timestamp !== this.base || current.timestamp !== head) {
       fail('DISCOVERY', 'Discovery did not return the requested block');
     }
-    const state = result => JSON.stringify(canonical(Object.fromEntries(fields.map(k => [k, result[k]]))));
-    if (state(mature) !== state(current)) {
+    if (!unchanged(mature, current)) {
       fail('STALE_STATE', 'Private notes or channels changed after the proof base. Wait for the recent transaction to mature, then try again.');
     }
     return mature;
@@ -42,11 +62,13 @@ export class MatureDiscoveryProvider extends IndexerDiscoveryProvider {
 
   async discoverNotes(address, viewingKey, params = {}) {
     if (params.blockIdentifier !== this.base || params.cursor) fail('STATE', 'Fresh discovery at the proof base is required');
-    return this.compare(blockIdentifier => super.discoverNotes(address, viewingKey, { ...params, blockIdentifier }), ['notes']);
+    return this.compare(blockIdentifier => super.discoverNotes(address, viewingKey, { ...params, blockIdentifier }), matureNotesUnchanged);
   }
 
   async discoverChannels(address, viewingKey, recipients, params = {}) {
     if (params.blockIdentifier !== this.base || params.cursor) fail('STATE', 'Fresh discovery at the proof base is required');
-    return this.compare(blockIdentifier => super.discoverChannels(address, viewingKey, recipients, { ...params, blockIdentifier }), ['channels', 'total']);
+    const state = result => JSON.stringify(canonical({ channels: result.channels, total: result.total }));
+    return this.compare(blockIdentifier => super.discoverChannels(address, viewingKey, recipients, { ...params, blockIdentifier }),
+      (mature, current) => state(mature) === state(current));
   }
 }

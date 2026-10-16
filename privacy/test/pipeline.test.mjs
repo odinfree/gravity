@@ -9,7 +9,7 @@ import {STRK} from '../worker.mjs';
 const vk='42',pool='0x123',account='0x456',chain='0x534e5f4d41494e';
 const publicKey=ec.starkCurve.getStarkKey('0x2a');
 async function pipeline(operation,{screened=false,wrongChain=false,noteAt=900,policy='required',mode='prepare',discoveryFails=false,
- publicBalance=100n*10n**18n,finalBalance=publicBalance,spentAtHead=false,channelAdvanced=false,channelAdded=false,wrongBlock=false}={}) {
+ publicBalance=100n*10n**18n,finalBalance=publicBalance,spentAtHead=false,noteAddedAtHead=false,noteChangedAtHead=false,channelAdvanced=false,channelAdded=false,wrongBlock=false}={}) {
  const methods=[],callbacks=[],requests=[];
  const server=createServer(async(req,res)=>{
   const chunks=[];for await(const c of req)chunks.push(c);
@@ -46,6 +46,10 @@ async function pipeline(operation,{screened=false,wrongChain=false,noteAt=900,po
    value={block_ref:wrongBlock?989:input.block_ref,channels:[{sender_addr:'0x789',channel_key:'0x7b'}],
     notes:spentAtHead&&input.block_ref===1000?[]:[{sender_addr:'0x789',token:STRK,note_id:'0xabc',amount:'12000000000000000000',block_number:noteAt,index:0,salt:'2'}],
     cursor:{channel_discovery_complete:true,total_n_channels:1,channels:{}}};
+   if(input.block_ref===1000){
+    if(noteChangedAtHead&&value.notes.length)value.notes[0].amount='13000000000000000000';
+    if(noteAddedAtHead)value.notes.push({sender_addr:'0x789',token:STRK,note_id:'0xdef',amount:'1',block_number:995,index:1,salt:'3'});
+   }
   } else throw new Error('Unexpected discovery route');
   res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify(value));
  });
@@ -129,6 +133,20 @@ for(const operation of ['transfer','withdraw'])test(`${operation} rejects a note
  const {result,callbacks}=await pipeline(operation,{spentAtHead:true});
  assert.equal(result.code,'STALE_STATE');assert.deepEqual(callbacks,['error']);
 });
+for(const operation of ['transfer','withdraw']) {
+ test(`${operation} can spend mature funds while a new incoming note is immature`,async()=>{
+  const {result,callbacks}=await pipeline(operation,{noteAddedAtHead:true});
+  assert.equal(result.kind,'result');assert.deepEqual(callbacks,['sign','prove','result']);
+ });
+ test(`${operation} still rejects removed mature notes when new notes arrive`,async()=>{
+  const {result,callbacks}=await pipeline(operation,{spentAtHead:true,noteAddedAtHead:true});
+  assert.equal(result.code,'STALE_STATE');assert.deepEqual(callbacks,['error']);
+ });
+ test(`${operation} rejects changed mature note contents`,async()=>{
+  const {result,callbacks}=await pipeline(operation,{noteChangedAtHead:true,noteAddedAtHead:true});
+  assert.equal(result.code,'STALE_STATE');assert.deepEqual(callbacks,['error']);
+ });
+}
 for(const change of ['channelAdvanced','channelAdded'])test(`deposit rejects ${change} after the proof base before screening`,async()=>{
  const {result,callbacks}=await pipeline('deposit',{[change]:true});
  assert.equal(result.code,'STALE_STATE');assert.deepEqual(callbacks,['error']);
