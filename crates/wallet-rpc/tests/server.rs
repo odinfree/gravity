@@ -169,6 +169,18 @@ async fn usage_endpoint_is_open_and_self_describing() {
     ] {
         assert!(methods.iter().any(|m| m == expected), "usage doc missing method {expected}");
     }
+    // Deferred methods must remain a separate string-only list of unimplemented calls.
+    let deferred = doc["deferred"]["methods"].as_array().unwrap();
+    assert_eq!(deferred.len(), 4);
+    for entry in deferred {
+        let name = entry.as_str().expect("deferred entries must be method names");
+        assert!(!methods.iter().any(|m| m == name), "supported method {name} marked deferred");
+    }
+    for name in ["companion_treasuryCapabilities", "companion_treasuryTransfer", "companion_treasuryStatus"] {
+        assert_eq!(methods.iter().filter(|m| m.as_str() == name).count(), 1,
+            "treasury method {name} must appear once in supported methods");
+    }
+    assert!(doc["deferred"].get("treasury").is_none());
     // Permission/grant model is documented (the key agent-facing behaviour).
     assert!(doc["concepts"]["permissions"].as_str().unwrap().contains("grant"));
 

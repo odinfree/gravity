@@ -8,6 +8,134 @@ Use the [entry template](#entry-template) at the bottom for every new entry.
 
 ---
 
+## 2026-10-16: Release documentation and API catalog correction
+
+**Did**
+- Rewrote the README with direct setup instructions and a feature/scope table,
+  using [Stop Slop](https://github.com/hardikpandya/stop-slop/blob/main/SKILL.md).
+  Kept upstream attribution, protocol names, legacy wallet identity and service
+  trust limits. Replaced the ambiguous "always-approved" treasury description
+  with mandatory native approval and the Sepolia-only source status.
+- Shortened five Cargo package descriptions without changing package identifiers,
+  dependency versions or licenses. Condensed current status; retained history here.
+- Prepared the combined release with the two prior upstream-fix commits and the
+  treasury implementation. The release owner handles commits, push and merge.
+
+**Review / fixes**
+- Release review found supported treasury methods duplicated inside the API's
+  deferred-method list. Removed the misplaced objects and kept the four deferred
+  names. Added a regression requiring string entries, disjoint supported/deferred
+  lists and exactly one supported entry for each treasury method.
+
+**Verify**
+- Before edits: Rust workspace 173 passed with three opt-in skips; strict clippy
+  passed. Final locked workspace tests: **173 passed**, zero failed.
+- Ran both opt-in synthetic SDK/Rust signing-pipeline tests: **2 passed**. The
+  existing live prover-health check stayed skipped; no wallet services were called.
+- Worker **43 passed**; desktop **21 passed**. Worker bundle, TypeScript/Vite build,
+  locked workspace build, strict clippy and native desktop `cargo check` passed.
+- Test keys, temporary journals and synthetic services only. No installation,
+  pairing, real wallet-state access, funded transaction or live signing.
+
+**Next / gates**
+- Merge the reviewed source and descriptions without changing repository visibility.
+  Gravity remains public. The installed app predates the treasury endpoint.
+- Independent human crypto-path review remains Blocked for production mainnet use.
+  Obtain separate authorization for a disposable Sepolia installation and treasury
+  validation; preserve existing accounts, viewing keys and v1 vaults.
+
+---
+
+## 2026-10-16 — Bound treasury conflicts and accepted-hash recovery
+
+**Did**
+- Valid account/nonce conflicts now atomically persist their own unsigned
+  `cancelled` record; generic storage/duplicate-ID failures remain errors.
+- Explicit owner-scoped status recovery can resolve a saved uncertain hash after
+  checking configured-node Sepolia chain, accepted receipt, exact INVOKE v3
+  sender/nonce/hash and canonical block-number/hash membership. The status CAS
+  preserves consumed-nonce uniqueness; no replay, blind unlock or funding credit.
+- Pending, missing-hash and inconsistent evidence stay held. Accepted reverted
+  transactions can resolve the account lock without claiming principal success.
+  Read transport is bounded, no-retry and response-envelope checked.
+
+**Review / fixes**
+- Reverse integration review found that a lost response could leave Gravity's
+  account lock held after Floodgate independently settled the receipt, then
+  strand a second external reservation on an unbound conflict error. Both paths
+  now have explicit bound recovery; Floodgate separately queries original status
+  after settlement without changing settled amounts.
+- Independent reviewer reran all 13 treasury lifecycle and two receipt/HTTP tests
+  and found no remaining concrete recovery blocker. Tests include simultaneous
+  status reads, status racing broadcast completion, restart, no replay, preserved
+  consumed nonce and successful next-nonce funding with synthetic keys only.
+- Pinned official OpenRPC 0.10.4 source and precise schemas in
+  [treasury.md](../code/treasury.md); this verifies response shapes, not a live node.
+
+**Verify**
+- Full Rust workspace: **173 passed, 0 failed, 3 existing opt-in skips**.
+  Strict workspace/all-target clippy, full workspace build and native desktop
+  `cargo check` pass. The skips require the existing live
+  prover or opt-in SDK pipeline; no live wallet/network operations were performed.
+- Prior desktop 21-test/production-build pass remains applicable: no desktop code
+  changed in this follow-up. Existing vault/address/key compatibility tests pass.
+
+**Next / gates**
+- Installed app remains unchanged; source support does not establish live readiness.
+  Mainnet is disabled pending independent human review. A disposable Sepolia
+  validation requires separate authorization. Provider trust and later reorg risk
+  remain explicit; external accounting still requires its own exact receipt check.
+
+---
+
+## 2026-10-16 — Source-only reviewed treasury transfers for Floodgate
+
+**Did**
+- Added `companion_treasuryCapabilities`, `companion_treasuryTransfer` and
+  owner-scoped `companion_treasuryStatus`. Transfers are fixed public STRK,
+  selected existing user accounts, explicit Sepolia and at most 50 recipients.
+- Added exact amount/total/nonce/resource/expiry review and mandatory native
+  approval regardless of grants; no arbitrary calls or signature export.
+- Bound each request and external plan hash to deterministic canonical SHA256;
+  shipped an independently generated shared fixture for the JavaScript client.
+- Added a separate private SQLite operation journal. Account/nonce reservations
+  are durable before approval; signing is marked before producing a signature,
+  and the expected transaction hash is saved before the one-shot node call.
+  Repeats return original status. Interrupted or uncertain signing never retries.
+- Revalidate token, account, session epoch, chain, expiry and fresh node nonce.
+  Support atomic expiry of abandoned unsigned reviews, while keeping potentially
+  signed operations held. Approval text scrolls and preserves exact line breaks.
+
+**Review / fixes**
+- Independent review found valid preflight failures without a durable safe
+  outcome and abandoned approval reservations without recovery. Both now have
+  bound cancelled/expired states; expiry CAS cannot cross the signing marker.
+- Independent final wallet review found no further blocker; the cross-language
+  canonical JSON/hash fixture matched independently. Mainnet human review remains open.
+- Tests caught canonical RPC addresses versus padded registry addresses;
+  comparison now uses felt identity without changing stored addresses.
+- Reverse review of Floodgate found SQLite path-alias risk and late accepted
+  receipt handling; those are tracked and fixed in Floodgate, not this repo.
+
+**Verify**
+- Baseline tests/clippy passed before edits. Updated workspace: 169 passed,
+  three opt-in checks skipped. Twelve treasury tests use only the public BIP-39
+  vector, mock nodes and temporary journals. Full workspace build and strict
+  clippy pass. Desktop 21 tests, TypeScript/Vite production build and native
+  `cargo check --manifest-path desktop/src-tauri/Cargo.toml` pass.
+- No real seed, vault access, pairing, installation, live signing or transaction
+  was used. Existing vault/address/viewing-key compatibility tests still pass.
+
+**Next / gates**
+- Source-only; installed wallet has not been updated. Independent human review
+  of the new signing/recovery path remains required. Mainnet is hard-disabled
+  (`MAINNET_NOT_ENABLED`) and remains Blocked under workflow security gates.
+- Account selection stays in Floodgate setup. A separately authorized disposable
+  Sepolia test must verify the installed build, concrete approval and accepted
+  receipt before any live-readiness claim. See [treasury.md](../code/treasury.md).
+
+---
+
 ## 2026-10-16 — Review fixes and local Gravity app update
 
 **Did**

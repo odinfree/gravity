@@ -20,6 +20,7 @@ pub mod privacy;
 pub mod server;
 pub mod session;
 pub mod store;
+pub mod treasury;
 pub mod usage;
 
 pub use approval::{

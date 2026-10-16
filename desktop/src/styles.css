@@ -371,6 +371,9 @@ button.ghost {
   margin: 0;
 }
 .dialog-summary {
+  white-space: pre-wrap;
+  max-height: 55vh;
+  overflow-y: auto;
   background: #0b0e13;
   border: 1px solid var(--line);
   border-radius: 8px;

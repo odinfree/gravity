@@ -4,7 +4,7 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "gravity CLI: a thin client for the local wallet-companion service. Discovers the running app via port.lock, pairs, and speaks the wallet_*/companion_* JSON-RPC API."
+description = "CLI for pairing with Gravity and calling its local wallet API."
 
 [[bin]]
 name = "gravity"

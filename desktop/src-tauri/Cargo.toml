@@ -2,7 +2,7 @@
 name = "gravity-desktop"
 version = "0.1.0"
 edition = "2021"
-description = "gravity — Starknet wallet companion (desktop menu-bar app)"
+description = "Starknet desktop wallet with transaction review and STRK20 privacy actions."
 
 [lib]
 name = "strkd_desktop_lib"

@@ -24,3 +24,6 @@ cli-token.json
 port.lock
 requests.db*
 /privacy/.cache/
+
+# Native treasury operation journal and SQLite sidecars.
+treasury.sqlite3*

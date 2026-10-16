@@ -1,0 +1,39 @@
+{
+  "request": {
+    "operationId": "12345678-1234-1234-1234-123456789abc",
+    "plan_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "chainId": "0x534e5f5345504f4c4941",
+    "account_address": "0x123",
+    "transfers": [
+      {
+        "recipient": "0x456",
+        "amount_low": "0x11",
+        "amount_high": "0x1"
+      },
+      {
+        "recipient": "0x789",
+        "amount_low": "0xffffffffffffffffffffffffffffffff",
+        "amount_high": "0x0"
+      }
+    ],
+    "nonce": "0x2",
+    "resource_bounds": {
+      "l1_gas": {
+        "max_amount": "0x10",
+        "max_price_per_unit": "0x20"
+      },
+      "l2_gas": {
+        "max_amount": "0x100",
+        "max_price_per_unit": "0x3"
+      },
+      "l1_data_gas": {
+        "max_amount": "0x1",
+        "max_price_per_unit": "0x4"
+      }
+    },
+    "max_fee": "1284",
+    "expires_at": 1800000000000
+  },
+  "canonicalJson": "{\"account_address\":\"0x123\",\"chainId\":\"0x534e5f5345504f4c4941\",\"expires_at\":1800000000000,\"max_fee\":\"1284\",\"nonce\":\"0x2\",\"operationId\":\"12345678-1234-1234-1234-123456789abc\",\"plan_hash\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"resource_bounds\":{\"l1_data_gas\":{\"max_amount\":\"0x1\",\"max_price_per_unit\":\"0x4\"},\"l1_gas\":{\"max_amount\":\"0x10\",\"max_price_per_unit\":\"0x20\"},\"l2_gas\":{\"max_amount\":\"0x100\",\"max_price_per_unit\":\"0x3\"}},\"transfers\":[{\"amount_high\":\"0x1\",\"amount_low\":\"0x11\",\"recipient\":\"0x456\"},{\"amount_high\":\"0x0\",\"amount_low\":\"0xffffffffffffffffffffffffffffffff\",\"recipient\":\"0x789\"}]}",
+  "intentHash": "03ed385903d0dfb4f104a7a3ce4cfdabc5093db438d6192047d2cc41da446c61"
+}

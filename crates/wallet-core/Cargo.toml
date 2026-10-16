@@ -3,7 +3,7 @@ name = "wallet-core"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "Core key management, derivation, signing and vault for the Starknet wallet companion."
+description = "Starknet account derivation, signing and encrypted wallet storage."
 
 [dependencies]
 krusty-kms = { workspace = true }
