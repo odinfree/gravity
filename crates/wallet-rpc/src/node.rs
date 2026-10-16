@@ -48,6 +48,13 @@ impl std::fmt::Display for NodeError {
 /// Minimal Starknet JSON-RPC surface the wallet needs.
 #[async_trait]
 pub trait StarknetRpc: Send + Sync {
+    /// Receipt + transaction + canonical block proof for the original treasury invoke.
+    /// Unsupported implementations fail closed; no mutation or signature replay.
+    async fn accepted_invoke(&self, _hash: &Felt, _sender: &Felt, _nonce: &Felt) -> Result<bool, NodeError> {
+        Err(NodeError::Decode("accepted invoke evidence unavailable".into()))
+    }
+    /// Explicit node network check required by the narrow treasury path.
+    async fn chain_id(&self) -> Result<Felt, NodeError> { Err(NodeError::Decode("chain identity unavailable".into())) }
     /// Current nonce of `address` (pending block).
     async fn get_nonce(&self, address: &Felt) -> Result<Felt, NodeError>;
 
@@ -215,6 +222,47 @@ impl HttpStarknetRpc {
         }
     }
 
+    /// Strict bounded read-only transport for treasury recovery; no redirect or retry.
+    async fn treasury_read(&self, method: &str, params: Value) -> Result<Value, NodeError> {
+        let target = self.url.read().unwrap().clone();
+        let mut response = self
+            .client
+            .post(&target)
+            .json(&json!({"jsonrpc":"2.0","id":1,"method":method,"params":params}))
+            .send()
+            .await
+            .map_err(|_| NodeError::Transport("treasury evidence unavailable".into()))?;
+        if response.status() != reqwest::StatusCode::OK {
+            return Err(NodeError::Decode("treasury evidence HTTP status".into()));
+        }
+        const MAX: usize = 2 * 1024 * 1024;
+        if response.content_length().is_some_and(|n| n > MAX as u64) {
+            return Err(NodeError::Decode("treasury evidence size limit".into()));
+        }
+        let mut bytes = Vec::new();
+        while let Some(chunk) = response
+            .chunk()
+            .await
+            .map_err(|_| NodeError::Decode("treasury evidence body".into()))?
+        {
+            if bytes.len() + chunk.len() > MAX {
+                return Err(NodeError::Decode("treasury evidence size limit".into()));
+            }
+            bytes.extend_from_slice(&chunk);
+        }
+        let v: Value = serde_json::from_slice(&bytes)
+            .map_err(|_| NodeError::Decode("treasury evidence JSON".into()))?;
+        if v["jsonrpc"] != "2.0"
+            || v["id"] != 1
+            || v.get("error").is_some()
+            || v.as_object().is_none_or(|o| o.len() != 3)
+        {
+            return Err(NodeError::Decode("treasury evidence envelope".into()));
+        }
+        v.get("result")
+            .cloned()
+            .ok_or_else(|| NodeError::Decode("treasury evidence result".into()))
+    }
     async fn call(&self, method: &str, params: Value) -> Result<Value, NodeError> {
         let body = json!({ "jsonrpc": "2.0", "id": 1, "method": method, "params": params });
         let target = self.url.read().unwrap().clone();
@@ -344,6 +392,46 @@ const ZERO_BOUNDS: FeeBounds = FeeBounds {
 
 #[async_trait]
 impl StarknetRpc for HttpStarknetRpc {
+    async fn accepted_invoke(
+        &self,
+        hash: &Felt,
+        sender: &Felt,
+        nonce: &Felt,
+    ) -> Result<bool, NodeError> {
+        let receipt = self
+            .treasury_read(
+                "starknet_getTransactionReceipt",
+                json!({"transaction_hash":fh(hash)}),
+            )
+            .await?;
+        let Some(number) = receipt.get("block_number").and_then(Value::as_u64) else {
+            return Ok(false);
+        };
+        let transaction = self
+            .treasury_read(
+                "starknet_getTransactionByHash",
+                json!({"transaction_hash":fh(hash)}),
+            )
+            .await?;
+        let block = self
+            .treasury_read(
+                "starknet_getBlockWithTxHashes",
+                json!({"block_id":{"block_number":number}}),
+            )
+            .await?;
+        Ok(accepted_invoke_evidence(
+            hash,
+            sender,
+            nonce,
+            &receipt,
+            &transaction,
+            &block,
+        ))
+    }
+    async fn chain_id(&self) -> Result<Felt, NodeError> {
+        let r = self.call("starknet_chainId", json!([])).await?;
+        Self::parse_felt(&r, "chain_id")
+    }
     async fn get_nonce(&self, address: &Felt) -> Result<Felt, NodeError> {
         let r = self
             .call("starknet_getNonce", json!([BLOCK_TAG, fh(address)]))
@@ -558,4 +646,194 @@ pub fn declare_v3_tx_json(
         tx["contract_class"] = cc.clone();
     }
     tx
+}
+
+/// Configured-provider evidence, not a light-client proof. Reverted acceptance
+/// also consumes the nonce; it never establishes principal transfer success.
+fn accepted_invoke_evidence(
+    hash: &Felt,
+    sender: &Felt,
+    nonce: &Felt,
+    r: &Value,
+    t: &Value,
+    b: &Value,
+) -> bool {
+    let f = |v: &Value| v.as_str().and_then(|s| Felt::from_hex(s).ok());
+    let accepted = |v: &Value| matches!(v.as_str(), Some("ACCEPTED_ON_L1" | "ACCEPTED_ON_L2"));
+    let Some(block_hash) = f(&r["block_hash"]) else {
+        return false;
+    };
+    if block_hash == Felt::ZERO
+        || !accepted(&r["finality_status"])
+        || !matches!(
+            r["execution_status"].as_str(),
+            Some("SUCCEEDED" | "REVERTED")
+        )
+        || r["type"] != "INVOKE"
+        || f(&r["transaction_hash"]) != Some(*hash)
+        || t["type"] != "INVOKE"
+        || f(&t["version"]) != Some(Felt::from(3u64))
+        || f(&t["transaction_hash"]) != Some(*hash)
+        || f(&t["sender_address"]) != Some(*sender)
+        || f(&t["nonce"]) != Some(*nonce)
+        || !accepted(&b["status"])
+        || f(&b["block_hash"]) != Some(block_hash)
+        || r["block_number"].as_u64().is_none()
+        || r["block_number"].as_u64() != b["block_number"].as_u64()
+    {
+        return false;
+    }
+    let Some(txs) = b["transactions"].as_array() else {
+        return false;
+    };
+    if txs.len() > 20000 {
+        return false;
+    }
+    let mut unique = std::collections::HashSet::new();
+    for tx in txs {
+        let Some(tx) = f(tx) else {
+            return false;
+        };
+        if tx == Felt::ZERO || !unique.insert(tx) {
+            return false;
+        }
+    }
+    unique.contains(hash)
+}
+
+#[cfg(test)]
+mod treasury_recovery_tests {
+    use super::*;
+    fn evidence() -> (Value, Value, Value) {
+        (
+            json!({"type":"INVOKE","transaction_hash":"0x11","finality_status":"ACCEPTED_ON_L2","execution_status":"SUCCEEDED","block_hash":"0x44","block_number":7}),
+            json!({"type":"INVOKE","version":"0x3","transaction_hash":"0x11","sender_address":"0x22","nonce":"0x3"}),
+            json!({"status":"ACCEPTED_ON_L2","block_hash":"0x44","block_number":7,"transactions":["0x11","0x12"]}),
+        )
+    }
+    fn valid(r: &Value, t: &Value, b: &Value) -> bool {
+        accepted_invoke_evidence(
+            &Felt::from(17u64),
+            &Felt::from(34u64),
+            &Felt::from(3u64),
+            r,
+            t,
+            b,
+        )
+    }
+    #[test]
+    fn accepted_evidence_requires_all_identity_and_canonical_inclusion_fields() {
+        let (r, t, b) = evidence();
+        assert!(valid(&r, &t, &b));
+        let mut reverted = r.clone();
+        reverted["execution_status"] = json!("REVERTED");
+        assert!(valid(&reverted, &t, &b));
+        for (key, value) in [
+            ("block_hash", json!("0x45")),
+            ("block_number", json!(8)),
+            ("transaction_hash", json!("0x12")),
+            ("finality_status", json!("PRE_CONFIRMED")),
+            ("execution_status", json!("UNKNOWN")),
+            ("type", json!("DECLARE")),
+        ] {
+            let mut x = r.clone();
+            x[key] = value;
+            assert!(!valid(&x, &t, &b), "receipt {key}");
+        }
+        for key in ["block_hash", "block_number", "execution_status"] {
+            let mut x = r.clone();
+            x.as_object_mut().unwrap().remove(key);
+            assert!(!valid(&x, &t, &b));
+        }
+        for (key, value) in [
+            ("transaction_hash", json!("0x12")),
+            ("sender_address", json!("0x23")),
+            ("nonce", json!("0x4")),
+            ("version", json!("0x1")),
+            ("type", json!("DECLARE")),
+        ] {
+            let mut x = t.clone();
+            x[key] = value;
+            assert!(!valid(&r, &x, &b), "transaction {key}");
+        }
+        for (key, value) in [
+            ("block_hash", json!("0x45")),
+            ("block_number", json!(8)),
+            ("status", json!("PRE_CONFIRMED")),
+            ("transactions", json!(["0x12"])),
+            ("transactions", json!(["0x11", "0x011"])),
+            ("transactions", json!(["0x11", "0x0"])),
+            ("transactions", json!(["0x11", "garbage"])),
+        ] {
+            let mut x = b.clone();
+            x[key] = value;
+            assert!(!valid(&r, &t, &x), "block {key}");
+        }
+    }
+    #[tokio::test]
+    async fn recovery_http_uses_only_exact_read_methods_and_rejects_bad_envelopes() {
+        use axum::{routing::post, Json, Router};
+        use std::sync::{Arc, Mutex};
+        let calls = Arc::new(Mutex::new(Vec::<Value>::new()));
+        let seen = calls.clone();
+        let app = Router::new().route(
+            "/",
+            post(move |Json(p): Json<Value>| {
+                let seen = seen.clone();
+                async move {
+                    seen.lock().unwrap().push(p.clone());
+                    let (r, t, b) = evidence();
+                    let result = match p["method"].as_str().unwrap() {
+                        "starknet_getTransactionReceipt" => {
+                            assert_eq!(p["params"], json!({"transaction_hash":"0x11"}));
+                            r
+                        }
+                        "starknet_getTransactionByHash" => {
+                            assert_eq!(p["params"], json!({"transaction_hash":"0x11"}));
+                            t
+                        }
+                        "starknet_getBlockWithTxHashes" => {
+                            assert_eq!(p["params"], json!({"block_id":{"block_number":7}}));
+                            b
+                        }
+                        _ => panic!("unexpected method"),
+                    };
+                    Json(json!({"jsonrpc":"2.0","id":1,"result":result}))
+                }
+            }),
+        );
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let task = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+        let node = HttpStarknetRpc::new(format!("http://{addr}"));
+        assert!(node
+            .accepted_invoke(&Felt::from(17u64), &Felt::from(34u64), &Felt::from(3u64))
+            .await
+            .unwrap());
+        assert_eq!(calls.lock().unwrap().len(), 3);
+        task.abort();
+        for response in [
+            json!({"jsonrpc":"2.0","id":2,"result":{}}),
+            json!({"jsonrpc":"2.0","id":1,"result":{},"error":{}}),
+            json!({"jsonrpc":"2.0","id":1,"error":{"message":"credential-canary"}}),
+        ] {
+            let app = Router::new().route(
+                "/",
+                post(move || {
+                    let r = response.clone();
+                    async move { Json(r) }
+                }),
+            );
+            let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let addr = listener.local_addr().unwrap();
+            let task = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+            let node = HttpStarknetRpc::new(format!("http://{addr}"));
+            let err = node
+                .accepted_invoke(&Felt::from(17u64), &Felt::from(34u64), &Felt::from(3u64))
+                .await
+                .unwrap_err();
+            assert!(!err.to_string().contains("credential-canary"));
+            task.abort();
+        }
+    }
 }

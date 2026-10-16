@@ -3,7 +3,7 @@ name = "wallet-rpc"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "Loopback JSON-RPC service for the Starknet wallet companion: auth, approval broker, and wallet_* / companion_* handlers."
+description = "Authenticated loopback JSON-RPC with wallet approval and transaction recovery."
 
 [dependencies]
 wallet-core = { path = "../wallet-core" }
@@ -22,7 +22,7 @@ rusqlite = { workspace = true }
 reqwest = { workspace = true }
 
 [dev-dependencies]
-tokio = { workspace = true, features = ["full"] }
+tokio = { workspace = true, features = ["full", "test-util"] }
 async-trait = { workspace = true }
 prover = { path = "../prover" }
 # Verify a signed SNIP-12 digest under the account's own key (strkd #7 regression).

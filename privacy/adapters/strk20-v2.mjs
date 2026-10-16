@@ -2,10 +2,12 @@
 import { ec, hash } from 'starknet';
 import { createPrivateTransfers, MAX_VIEWING_KEY } from '@starkware-libs/starknet-privacy-sdk';
 import { STRK, felt, amount, endpoint, screeningRequired, approvalCalls, fail } from '../validation.mjs';
+import { MatureDiscoveryProvider } from '../mature-discovery.mjs';
 
 export async function run(request, callback) {
   const { config, account, operation, mode } = request;
   const address = felt(account), pool = felt(config.pool_address), token = felt(request.token ?? STRK);
+  if (token !== felt(STRK)) fail('INPUT', 'This pool adapter currently supports STRK only');
   const chain = config.chain_id;
   if (!['0x534e5f4d41494e','0x534e5f5345504f4c4941'].includes(chain)) fail('CONFIG', 'Unsupported network');
   const vk = BigInt(request.viewing_key);
@@ -57,7 +59,9 @@ export async function run(request, callback) {
   };
   const transfers = createPrivateTransfers({account:{address,signer},
     viewingKeyProvider:{getViewingKey:async()=>vk},poolContractAddress:pool,
-    discoveryProvider:{url:config.discovery_url},
+    discoveryProvider:mode === 'prepare'
+      ? new MatureDiscoveryProvider(config.discovery_url, pool, base, () => rpc('starknet_blockNumber', []))
+      : {url:config.discovery_url},
     provingProvider:{
       getDefaultDetails:async()=>({walletAddress:pool,cairoVersion:'1',version:'0x3',chainId:chain,
         nonce:BigInt(await rpc('starknet_getNonce',{block_id:block,contract_address:pool})),
@@ -84,6 +88,10 @@ export async function run(request, callback) {
   if (operation === 'register' && common.registered) fail('REGISTERED','This account is already registered');
   if (operation !== 'register' && (!common.registered || matureKey !== vkPublic)) fail('REGISTER','Register this account first and wait for its registration to mature');
   const quantity = operation === 'register' ? 0n : amount(request.amount);
+  // The pool fee is paid publicly, including for private sends/withdrawals.
+  // Check it before signing/proving (and before consuming a screening quota).
+  const requiredPublic = fee + (operation === 'deposit' ? quantity : 0n);
+  if (publicBalance <= requiredPublic) fail('PUBLIC_BALANCE', 'Public STRK must cover the deposit plus pool fee, with funds left for network fees');
   const recipient = felt(request.recipient ?? address);
   if (operation === 'transfer' && BigInt((await call(pool,'get_public_key',[recipient],block))[0]) === 0n) fail('RECIPIENT','Recipient must register with this pool first');
   if (operation === 'deposit') {
@@ -126,6 +134,10 @@ export async function run(request, callback) {
     max_price_per_unit:felt(((BigInt(estimate[r+'_price'])*150n+99n)/100n).toString())}]));
   const maxFee=Object.values(bounds).reduce((n,v)=>n+BigInt(v.max_amount)*BigInt(v.max_price_per_unit),0n);
   if (maxFee <= 0n) fail('FEE','Node returned an invalid fee estimate');
+  const finalBalance = await call(token,'balanceOf',[address]);
+  if (BigInt(finalBalance[0]) + (BigInt(finalBalance[1] ?? 0) << 128n) < requiredPublic + maxFee) {
+    fail('PUBLIC_BALANCE', 'Public STRK cannot cover the deposit, pool fee and maximum network fee');
+  }
   return {...common,operation,amount:quantity.toString(),recipient,calls,nonce,resource_bounds:bounds,
     max_network_fee:maxFee.toString(),proof:proof.data,proof_facts:proof.proofFacts,
     warnings:operation==='register'?[]:['The submitting account and network fees remain public. Deposits and withdrawals also reveal their amount.'],

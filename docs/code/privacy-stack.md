@@ -162,6 +162,16 @@ receipt polling. Balance discovery pins a numeric chain head; notes newer than
 the mature proof base are excluded from the spendable amount. Read-only worker
 requests time out after 60 seconds; proof preparation retains its 16-minute limit.
 
+Before preparing a proof, SDK discovery checks that every mature note remains
+unchanged at a fresh numbered head; newly received immature notes do not block
+spending older funds. A removed or changed mature note, changed channel count,
+or advanced channel nonce stops preparation before signing/proving.
+Discovery must return the exact requested block. Public STRK must cover the
+deposit (if any), pool fee and leave funds for gas; after estimation, its current
+balance must cover the padded network fee too. These checks use exact base units
+and both u256 limbs. They do not prevent state changes while a proof is running.
+See the [upstream adaptation and evidence](upstream-fixes-2026-10.md).
+
 Journals store hashes, public accounts and receipt states, not private notes.
 Privacy RPC requests/results/errors are excluded from full-payload request logs.
 The `starknet-rpc` prover backend stores proof output and sanitized metadata, not

@@ -1,52 +1,39 @@
 # gravity
 
-A local agent wallet for the **Starknet privacy stack**. Create accounts, pair an
-agent, generate proofs with your own prover, and review transactions in a desktop
-app. Signing keys stay in the Rust wallet core.
+A Starknet desktop wallet with STRK20 privacy actions and an API for paired
+applications and agents. You review spending in the app; the Rust wallet core
+holds the signing keys.
 
-**STRK20 is the first pool adapter, not the wallet's identity.** This version
-supports registration, shielded STRK balances, shielding, private transfers and
-unshielding through STRK20 v2-compatible contracts. Pool addresses, discovery
-services and deposit policy are configurable per network. Different contract
-interfaces or compliance protocols require another adapter; they are not
-implemented automatically by changing an address.
+Gravity is an independent fork of
+[starknet-innovation/strkd](https://github.com/starknet-innovation/strkd). It retains
+the upstream wallet core, pairing and proving infrastructure. Privacy actions use
+the [Starknet privacy SDK](https://github.com/starkware-libs/starknet-privacy/tree/main/sdk).
 
-This is an independent fork of
-[starknet-innovation/strkd](https://github.com/starknet-innovation/strkd), retaining
-its wallet core, agent pairing, approval flow and proving infrastructure. Privacy
-actions use the [Starknet privacy SDK](https://github.com/starkware-libs/starknet-privacy/tree/main/sdk).
-It is a complete wallet repository, independent of any skills collection.
+## Current support
 
-**Screened deposits require operator-issued access.** gravity includes a
-[Starkscan deposit adapter](docs/code/starkscan-screening.md) with a shared local
-daily limit; no credential or entitlement is bundled. Other operations retain
-your own prover. Registration is live-verified; the hosted shield → transfer →
-withdraw flow is not yet live-verified.
+| Feature | Scope |
+|---|---|
+| Accounts | Seed wallets, additional user accounts and scoped agent accounts |
+| Privacy | Registration, STRK shielding, private transfer and unshielding through STRK20 v2-compatible pools |
+| Services | Per-network RPC, prover, discovery and deposit-policy settings |
+| Screened deposits | Optional Starkscan adapter with shared quota accounting; operator-issued `prove` access required |
+| Agent API | Authenticated preparation, native approval and receipt recovery through `companion_privacy*` |
+| Public treasury | Exact STRK transfer review, mandatory approval and durable recovery through `companion_treasury*`; Sepolia only |
 
-## What is implemented
+Registration and shielding have prior live receipts. Private transfer and
+withdrawal still need live acceptance and balance reconciliation. The new treasury
+endpoint has passed source tests and integration review; we have not installed or
+live-tested it. See [current status](docs/project/status.md).
 
-- Create a new seed wallet, additional accounts and scoped agent accounts.
-- Desktop **Privacy** tab: register, check balances, shield, transfer, unshield,
-  review amount and fees, and reconcile transaction receipts.
-- Your own Starknet transaction prover over HTTPS or a loopback SSH tunnel.
-- Optional Starkscan hosted proving for screened mainnet deposits, with shared
-  quota accounting, result recovery and expiring-attestation checks.
-- A separate discovery service, with its address kept in local settings.
-- Pool policy profiles: screening required, or contract-enforced policy for
-  custom compatible pools. The known STRK20 deployments require screening.
-- Authenticated agent methods for preparation, approval and receipt recovery.
-- Exact token allowances, explicit networks, mature proof state, expiring reviews
-  and no automatic broadcast retries after an uncertain response.
-
-A prepared proof is not a completed payment. A successful accepted receipt and
-refreshed note balances establish the result. The standard `wallet_strk20*`
-methods are still deferred; this fork exposes `companion_privacy*` methods.
+The wallet supports STRK20 v2-compatible contracts. Other tokens, pool interfaces
+and compliance protocols need adapter work. The standard `wallet_strk20*` API
+remains deferred.
 
 ## Build and run
 
-Requirements: Rust stable, Node.js **24+**, npm, and the platform dependencies
-for [Tauri 2](https://v2.tauri.app/start/prerequisites/). The private SDK worker is
-bundled as JavaScript; **Node itself is required on the machine running the app**.
+Install Rust stable, Node.js **24+**, npm and the
+[Tauri 2 platform dependencies](https://v2.tauri.app/start/prerequisites/).
+The app bundles its JavaScript privacy worker and requires Node on the host.
 
 ```sh
 git clone https://github.com/odinfree/gravity.git
@@ -58,58 +45,68 @@ npm run tauri build -- --config tauri.self-hosted.conf.json --bundles app --no-s
 ```
 
 On macOS, open `desktop/src-tauri/target/release/bundle/macos/gravity.app`.
-This build uses your configured prover; it does not bundle a native prover.
-For development, build the worker with `npm run build:privacy`, then run
-`npm run tauri dev` from `desktop/`.
+This unsigned build uses your configured prover. For development, run
+`npm run build:privacy`, then `npm run tauri dev` from `desktop/`.
 
-The SDK package is vendored from its public source so this build needs no GitHub
-Packages credential. [Provenance and licenses](privacy/PROVENANCE.md).
+The vendored SDK builds without a GitHub Packages credential.
+[Provenance and licenses](privacy/PROVENANCE.md).
 
 ## Set up privacy
 
-1. Create/unlock your wallet and select the intended network.
-2. In **Settings**, configure its blockchain RPC. Select `starknet-rpc` under
-   Proving, enter your prover endpoint, save and restart.
-3. Open **Privacy → Privacy services**. Select a compatible pool, its deposit
-   policy and your discovery endpoint. Services must use the same chain/pool.
-4. Fund and deploy the account. Privacy checks its pool registration automatically.
-5. Review the selected account, recipient, amount, pool fee and editable maximum
-   network fee. Click **Register**, **Shield STRK**, **Private transfer** or
-   **Unshield** once. gravity proves and submits within those fee ceilings,
-   without a second dialog. Excess fees stop the operation before broadcast.
-6. Receipt checks and the registration/balance update run automatically.
-   Success returns directly to the action form; there is no Done step.
-   Dependent actions wait until accepted state is mature.
+1. Create or unlock your wallet and select the network.
+2. In **Settings**, configure the blockchain RPC. Select `starknet-rpc` under
+   Proving, enter the prover endpoint, save and restart.
+3. Open **Privacy → Privacy services**. Set the pool, deposit policy and discovery
+   endpoint. Use the same chain and pool across services.
+4. Fund and deploy the account. The Privacy screen checks pool registration.
+5. Review the account, recipient, amount, pool fee and maximum network fee.
+   Click **Register**, **Shield STRK**, **Private transfer** or **Unshield** once.
+   That click authorizes proving and submission within the displayed fee ceilings;
+   there is no second approval dialog. Excess fees stop submission.
+6. Check the accepted receipt and refreshed registration or note balance before
+   taking the next dependent action.
 
-For screened pools, the prover must return the pool's screening attestation.
-A bare self-hosted prover does **not** supply screening authorization; shielding
-stops before submission if the required attestation is missing. Choosing a
-custom policy cannot bypass an existing pool's contract rules.
-gravity remembers a missing attestation and shows **Shielding unavailable**;
-prover health and registration are never treated as screening authorization.
-The [official screening sidecar](https://github.com/starkware-libs/starknet-privacy/blob/main/proof-interceptor/README.md)
-requires credentials issued by its screening operator. This repository does not
-include those credentials or an authorized public screening service.
-Alternatively, operators with Starkscan `prove` access can run the
-[shared deposit adapter](docs/code/starkscan-screening.md) and select it in
-the Privacy screen. The choice saves immediately; other actions retain the
-configured prover. A successful local health check is not proof of hosted access.
+Known STRK20 pools require a screening attestation for deposits. A prover endpoint
+alone does not provide that authorization. Obtain credentials from the operator
+of the [screening sidecar](https://github.com/starkware-libs/starknet-privacy/blob/main/proof-interceptor/README.md),
+or use the [Starkscan deposit adapter](docs/code/starkscan-screening.md) with
+operator-issued `prove` access. The repository includes neither entitlement.
+Choosing a custom policy cannot bypass the pool contract's rules.
 
-[Complete privacy guide](docs/code/privacy-stack.md) ·
-[Self-hosted prover setup](docs/code/self-hosted-prover.md) ·
+Select the deposit adapter in the Privacy screen; other actions keep the
+configured prover. Missing attestations produce **Shielding unavailable**.
+A service health response does not verify screening access.
+
+[Privacy guide](docs/code/privacy-stack.md) ·
+[Prover setup](docs/code/self-hosted-prover.md) ·
 [Documentation index](docs/index.md)
+
+## Public treasury transfers
+
+External applications such as Floodgate can request public STRK transfers from a
+selected user account. You approve exact recipients, uint256 amounts, nonce,
+resource bounds, fee cap and expiry. The wallet binds the request to an immutable
+operation and plan hash, including for callers with auto-approval grants.
+
+The endpoint submits once and returns status and a transaction hash without
+exporting signatures. Recover the original operation after an uncertain response.
+Accepted receipt, transaction and block evidence can resolve a saved uncertain
+hash; missing or inconsistent evidence keeps the reservation held.
+
+**The treasury endpoint rejects mainnet with `MAINNET_NOT_ENABLED`.** Independent
+human review and an authorized Sepolia validation remain required. Read the
+[request schema and recovery rules](docs/code/treasury.md) before integration.
 
 ## Agents and CLI
 
-Open **Connect** and copy the prompt for your agent. The local endpoint describes
-its API at `GET /`; pair once, then use `companion_privacyStatus`,
+Open **Connect** and copy the pairing prompt. The loopback service documents its
+API at `GET /`. Privacy methods include `companion_privacyStatus`,
 `companion_privacyBalances`, `companion_privacyPrepare`, `companion_privacySubmit`,
 `companion_privacyReceipt` and `companion_privacyHistory`.
 
-Agent privacy spending requires a concrete on-screen approval, including for
-agents with generic auto-approval grants. Agent preparation never broadcasts.
-The native desktop action is a separate one-click authorization with explicit
-fee ceilings; it is not exposed as an agent RPC method.
+Agent privacy spending requires native approval, including for agents with
+auto-approval grants. Preparation does not broadcast. The desktop's one-click
+privacy action is a separate authorization path with explicit fee ceilings.
 
 ```sh
 cargo install --path crates/wallet-cli
@@ -118,40 +115,39 @@ gravity accounts
 gravity usage
 ```
 
-For upgrade compatibility, the app still uses the legacy `org.starknet.strkd`
-identifier/data directory and `STRKD_*` configuration variables. Existing vaults,
-accounts and pairings are preserved. Do not run upstream strkd and gravity
-against that same data directory at the same time.
+Gravity preserves the legacy `org.starknet.strkd` app identifier and data directory,
+`STRKD_*` configuration variables, account addresses, viewing keys, pairings and
+v1 vault format. Do not run upstream strkd and Gravity against the same data
+directory at the same time. The [October backport](docs/code/upstream-fixes-2026-10.md)
+includes signing and preflight fixes; it excludes upstream's breaking address
+and vault migration.
 
-## Verification and limits
+## Verification and security limits
 
 ```sh
-cargo build
-cargo test
-cargo clippy --all-targets -- -D warnings
+cargo build --locked --workspace
+cargo test --locked --workspace
+cargo clippy --locked --workspace --all-targets -- -D warnings
 npm --prefix privacy run build
 npm --prefix privacy test
 npm --prefix desktop test
 npm --prefix desktop run build
-# Requires the built worker and Node 24+; entirely synthetic local services:
-cargo test -p wallet-rpc --test privacy_pipeline -- --ignored
+# Synthetic SDK/Rust pipeline; requires the built worker and Node 24+:
+STRKD_PRIVACY_NODE="$(command -v node)" cargo test --locked -p wallet-rpc --test privacy_pipeline -- --ignored
 ```
 
-Automated tests cover the real SDK/stdio/signing pipeline using synthetic chain
-and proof responses. They do not establish live pool acceptance. Live shielding,
-private transfer and withdrawal acceptance for this new integration remain to be
-verified with authorized test funds and the chosen pool's services.
+Tests use public test keys and synthetic services. Verify live acceptance with
+accepted receipts and refreshed balances before claiming a working funded flow.
 
-**Experimental and unaudited. DYOR.** Inspect the code, pool and compliance model;
-understand the fees and trust assumptions before using it. The new viewing-key
-and signing paths need independent security review before production use. There
-is no guarantee of privacy, compliance, recovery or financial safety. Provers and
-discovery operators receive private/viewing material; use services you trust.
+Independent human review of the crypto, viewing-key and signing paths remains a
+gate for production mainnet use. Prover and discovery operators receive private
+or viewing material; choose them with that access in mind. Automated checks do
+not establish privacy, account portability or recovery guarantees.
 
 ## Contributing to the documentation
 
-Add new docs to [docs/index.md](docs/index.md). Update the current
-[status](docs/project/status.md) and append a [progress entry](docs/project/progress-log.md)
-with meaningful changes. Preserve upstream attribution and license notices.
-Never commit a seed, private key, viewing key, RPC credential, wallet state or
-agent bearer token.
+Link new docs from [docs/index.md](docs/index.md). Update
+[status](docs/project/status.md) and prepend a [progress entry](docs/project/progress-log.md)
+without changing older entries. Preserve upstream attribution and license notices.
+Keep seeds, private and viewing keys, RPC credentials, wallet state and bearer
+tokens out of commits.

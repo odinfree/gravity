@@ -256,7 +256,7 @@ normal invoke." },
         ],
 
         "deferred": {
-            "note": "These exist in the Starknet wallet spec but return -32601 here for now.",
+            "note": "These Starknet wallet spec methods return -32601 in this build.",
             "methods": ["wallet_addStarknetChain", "wallet_strk20PrepareInvoke",
                         "wallet_strk20InvokeTransaction", "wallet_strk20Balances"]
         },
@@ -309,5 +309,16 @@ normal invoke." },
     ]);
     doc["methods"].as_array_mut().expect("usage methods array")
         .extend(privacy.as_array().expect("privacy methods array").iter().cloned());
+    let treasury = json!([
+            { "method": "companion_treasuryCapabilities", "auth": false, "prompts": false, "params": "{}", "returns": "schemaVersion, methods, networks, token, intentHashAlgorithm, signingEnabled, mainnetEnabled" },
+            { "method": "companion_treasuryTransfer", "auth": "app", "prompts": true, "params": "TransferRequest (docs/code/treasury.md)", "returns": "schemaVersion, operationId, intentHash, plan_hash, status, transactionHash" },
+            { "method": "companion_treasuryStatus", "auth": true, "prompts": false, "params": "{ operationId }", "returns": "owner-scoped durable transfer status; no signatures" }
+    ]);
+    doc["methods"].as_array_mut().expect("usage methods array")
+        .extend(treasury.as_array().expect("treasury methods array").iter().cloned());
+    doc["treasury"] = json!({
+        "review": "Public STRK transfers from a selected user account on SN_SEPOLIA. Requires native approval even with an active grant. Returns no signatures. See docs/code/treasury.md.",
+        "recovery": "Durable operation ID and SHA256 intent binding. Status recovery only; never resubmit uncertainty under a different ID. Mainnet disabled pending independent human review."
+    });
     doc
 }

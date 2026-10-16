@@ -50,6 +50,7 @@ pub struct ServerState {
     /// remote-prover API key) are IPC-only and never reachable through here.
     pub prover: Option<Arc<prover::ProverState>>,
     pub privacy: Option<Arc<crate::privacy::PrivacyState>>,
+    pub treasury: Option<Arc<crate::treasury::TreasuryJournal>>,
     pub api_version: String,
     pub spec_versions: Vec<String>,
 }
@@ -81,6 +82,7 @@ impl ServerState {
             issue_repo: DEFAULT_ISSUE_REPO.to_string(),
             prover: None,
             privacy: None,
+            treasury: None,
             api_version: "0.1.0".to_string(),
             // The Starknet JSON-RPC spec the wallet's node client targets.
             // Verified against the Sepolia node (starknet_specVersion → 0.10.2,
@@ -114,6 +116,8 @@ impl ServerState {
     /// Use a file-backed client store (persists pairings + grants across
     /// restarts). Loads any existing clients from `path`.
     pub fn with_clients_path(mut self, path: std::path::PathBuf) -> Self {
+        // Fail closed for treasury spending if its durable journal cannot be opened.
+        self.treasury = crate::treasury::TreasuryJournal::open(&path.with_file_name("treasury.sqlite3")).ok().map(Arc::new);
         self.clients = Arc::new(Mutex::new(ClientStore::open(path)));
         self
     }
@@ -389,6 +393,9 @@ async fn handle(state: &ServerState, token: Option<&str>, req: Request) -> Handl
                 client: None,
             };
         }
+        "companion_treasuryCapabilities" => {
+            return Handled { result: Ok(crate::treasury::capabilities(state)), decision: "n/a".into(), client: None };
+        }
         "wallet_getPermissions" => {
             // Returns granted permissions for the caller, or [] if not paired.
             let granted = match token {
@@ -506,6 +513,8 @@ async fn handle(state: &ServerState, token: Option<&str>, req: Request) -> Handl
                 _ => Err(WalletRpcError::InvalidRequest("Missing transaction_hash or chain_id".into())),
             }
         }
+        "companion_treasuryTransfer" => crate::treasury::transfer(state, &client, token.unwrap_or(""), &params).await,
+        "companion_treasuryStatus" => crate::treasury::recover_status(state, &client, &params).await,
         "wallet_deploymentData" => handle_deployment_data(state, &client).await,
         "wallet_signTypedData" => handle_sign_typed_data(state, &client, &params).await,
         "wallet_addInvokeTransaction" => handle_add_invoke(state, &client, &params).await,
@@ -538,6 +547,7 @@ async fn handle(state: &ServerState, token: Option<&str>, req: Request) -> Handl
         | "wallet_watchAsset"
         | "companion_createAgentAccount"
         | "companion_requestFunding"
+        | "companion_treasuryTransfer"
         | "companion_requestGrant"
         | "companion_deployAccount"
         | "companion_signAndProve" => decision_label(&result),

@@ -84,6 +84,10 @@ fn sign_hash(mnemonic: &str, domain: Domain, index: u32,
 - `sign_hash` signs a caller-supplied hash (a tx hash or a SNIP-12 typed-data
   hash). Stark ECDSA is RFC-6979 deterministic, so signing the same hash with
   the same key is reproducible — tests rely on this.
+- `typed_data_message_hash` uses the canonical encoder at krusty `2b6b7b5`.
+  `typed_data.rs` rejects ambiguous numeric selector values before signing;
+  selectors must be function names. See the [compatibility checks and input
+  limits](upstream-fixes-2026-10.md).
 - **Memory-hygiene caveat:** `Felt` is `Copy` and cannot be zeroized in place.
   Keys are kept short-lived; threading krusty's `SecretFelt` through the signing
   path is the planned hardening (spec §5.2).
